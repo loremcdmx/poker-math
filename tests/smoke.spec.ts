@@ -57,3 +57,21 @@ test('igor mode mobile layout stays narrow and hero actions are useful', async (
 
   await context.close()
 })
+
+test('advanced mode exposes range grid and board analysis', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
+
+  await expect(page.getByText('Комбинаторика, блокеры и разбор диапазона по борду.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Toggle AKs' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Очистить', exact: true }).click()
+  await page.getByRole('button', { name: 'TT+' }).click()
+
+  await page.getByRole('combobox', { name: 'Флоп 1' }).selectOption('Ah')
+  await page.getByRole('combobox', { name: 'Флоп 2' }).selectOption('Kd')
+  await page.getByRole('combobox', { name: 'Флоп 3' }).selectOption('7c')
+
+  await expect(page.getByText('Made hand breakdown текущего диапазона.')).toBeVisible()
+  await expect(page.locator('#advanced-panel')).toContainText('Живые комбо')
+})

@@ -19,9 +19,9 @@
 
 .mode-switch {
   display: inline-grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  width: min(100%, 560px);
+  width: min(100%, 820px);
   padding: 8px;
   margin-bottom: 0;
   border-radius: 24px;
@@ -904,6 +904,184 @@ tbody tr:hover td {
   margin-top: 6px;
 }
 
+.advanced-hero .hero-copy h1 {
+  max-width: 12ch;
+}
+
+.advanced-layout,
+.combo-guide-grid,
+.combo-table-stack {
+  display: grid;
+  gap: 24px;
+}
+
+.advanced-layout {
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  margin-top: 24px;
+}
+
+.combo-guide-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.combo-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.range-matrix-wrap {
+  margin-top: 20px;
+  overflow: auto;
+}
+
+.range-matrix {
+  display: grid;
+  grid-template-columns: 36px repeat(13, minmax(48px, 1fr));
+  gap: 6px;
+  min-width: 742px;
+}
+
+.range-axis,
+.range-cell {
+  display: grid;
+  place-items: center;
+  min-height: 42px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+}
+
+.range-axis {
+  color: var(--accent-ink);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.range-corner {
+  background: transparent;
+}
+
+.range-cell {
+  border: 1px solid rgba(58, 38, 23, 0.1);
+  background: rgba(255, 252, 246, 0.9);
+  color: var(--ink-strong);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.range-cell.suited {
+  background: rgba(201, 234, 225, 0.66);
+}
+
+.range-cell.offsuit {
+  background: rgba(240, 225, 201, 0.66);
+}
+
+.range-cell.pair {
+  background: rgba(255, 232, 188, 0.72);
+}
+
+.range-cell:hover,
+.range-cell:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(24, 92, 76, 0.3);
+  box-shadow: 0 10px 20px rgba(9, 37, 31, 0.08);
+  outline: none;
+}
+
+.range-cell.active {
+  background: linear-gradient(135deg, rgba(24, 92, 76, 0.95), rgba(15, 58, 48, 0.92));
+  border-color: rgba(24, 92, 76, 0.4);
+  color: var(--felt-cream);
+}
+
+.board-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.board-field {
+  display: grid;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.board-field select {
+  border: 1px solid rgba(52, 35, 22, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 252, 246, 0.9);
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink-strong);
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.board-field select:focus-visible {
+  outline: none;
+  border-color: rgba(24, 92, 76, 0.32);
+  box-shadow: 0 0 0 4px rgba(24, 92, 76, 0.1);
+}
+
+.combo-board-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.combo-board-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.combo-board-card,
+.combo-board-empty {
+  border-radius: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(58, 38, 23, 0.1);
+  background: rgba(255, 252, 246, 0.86);
+  color: var(--ink-strong);
+  font-weight: 800;
+}
+
+.combo-board-card.red {
+  color: #9d2d2d;
+}
+
+.combo-board-card.dark {
+  color: var(--ink-strong);
+}
+
+.compact-summary {
+  margin-top: 20px;
+}
+
+.compact-summary .result-card h3 {
+  font-size: clamp(1.75rem, 3.3vw, 2.6rem);
+}
+
+.combo-table-stack .table-wrap {
+  margin-top: 0;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -921,7 +1099,9 @@ tbody tr:hover td {
   .content-grid,
   .lesson-grid,
   .igor-tool-grid,
-  .summary-grid {
+  .summary-grid,
+  .advanced-layout,
+  .combo-guide-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1017,7 +1197,9 @@ tbody tr:hover td {
   .summary-grid,
   .igor-output-grid,
   .igor-raw-grid,
-  .global-display-toggle {
+  .global-display-toggle,
+  .board-control-grid,
+  .combo-guide-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1046,6 +1228,15 @@ tbody tr:hover td {
 
   .inline-fields {
     flex-direction: column;
+  }
+
+  .combo-board-toolbar {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .range-matrix {
+    min-width: 620px;
   }
 
   .number-field,
@@ -1080,7 +1271,9 @@ tbody tr:hover td {
   .igor-output-grid,
   .igor-raw-grid,
   .focus-metrics,
-  .global-display-toggle {
+  .global-display-toggle,
+  .board-control-grid,
+  .combo-guide-grid {
     grid-template-columns: 1fr;
   }
 }

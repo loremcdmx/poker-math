@@ -1,10 +1,13 @@
 import { useState, type KeyboardEvent } from 'react'
 import './App.css'
+import { AdvancedMode } from './modes/AdvancedMode'
 import { IgorMode } from './modes/IgorMode'
 import { QuickMode } from './modes/QuickMode'
 import type { DisplayMode } from './lib/pokerMath'
 
-type AppMode = 'quick' | 'igor'
+type AppMode = 'quick' | 'igor' | 'advanced'
+
+const appModes: AppMode[] = ['quick', 'igor', 'advanced']
 
 function App() {
   const [appMode, setAppMode] = useState<AppMode>('quick')
@@ -17,13 +20,10 @@ function App() {
     }
 
     event.preventDefault()
-
-    if (currentMode === 'quick') {
-      setAppMode('igor')
-      return
-    }
-
-    setAppMode('quick')
+    const direction = event.key === 'ArrowRight' ? 1 : -1
+    const currentIndex = appModes.indexOf(currentMode)
+    const nextIndex = (currentIndex + direction + appModes.length) % appModes.length
+    setAppMode(appModes[nextIndex])
   }
 
   return (
@@ -55,6 +55,19 @@ function App() {
             type="button"
           >
             Режим Игоря
+          </button>
+          <button
+            aria-controls="advanced-panel"
+            aria-selected={appMode === 'advanced'}
+            className={appMode === 'advanced' ? 'mode-switch-item active' : 'mode-switch-item'}
+            id="advanced-tab"
+            onClick={() => setAppMode('advanced')}
+            onKeyDown={(event) => handleModeTabKeyDown(event, 'advanced')}
+            role="tab"
+            tabIndex={appMode === 'advanced' ? 0 : -1}
+            type="button"
+          >
+            Адвансд мод
           </button>
         </div>
 
@@ -94,7 +107,7 @@ function App() {
             onBetPercentChange={setBetPercent}
           />
         </section>
-      ) : (
+      ) : appMode === 'igor' ? (
         <section
           aria-labelledby="igor-tab"
           id="igor-panel"
@@ -102,6 +115,15 @@ function App() {
           tabIndex={0}
         >
           <IgorMode displayMode={displayMode} />
+        </section>
+      ) : (
+        <section
+          aria-labelledby="advanced-tab"
+          id="advanced-panel"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          <AdvancedMode displayMode={displayMode} />
         </section>
       )}
     </div>

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import App from './App'
 
 describe('App', () => {
-  it('applies the global display toggle across quick and Igor modes', async () => {
+  it('applies the global display toggle across all modes', async () => {
     const user = userEvent.setup()
 
     render(<App />)
@@ -16,5 +16,9 @@ describe('App', () => {
     await user.click(screen.getByRole('tab', { name: 'Режим Игоря' }))
 
     expect(screen.getAllByText('4/5 банка').length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('tab', { name: 'Адвансд мод' }))
+
+    expect(screen.getByText(/Доля живых/i)).toBeInTheDocument()
   })
 })
