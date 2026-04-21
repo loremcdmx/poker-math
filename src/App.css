@@ -4,6 +4,10 @@
   padding: 32px 0 56px;
 }
 
+.jump-target {
+  scroll-margin-top: 18px;
+}
+
 .mode-switch {
   display: inline-grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -62,12 +66,18 @@
 }
 
 .hero-panel {
-  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.95fr);
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.92fr);
   align-items: stretch;
-  padding: clamp(24px, 3.2vw, 36px);
+  padding: clamp(22px, 3vw, 34px);
   border-radius: 32px;
   margin-bottom: 24px;
   animation: rise-in 0.7s ease both;
+}
+
+.hero-copy {
+  display: grid;
+  align-content: start;
+  gap: 14px;
 }
 
 .hero-copy h1,
@@ -82,13 +92,13 @@
 }
 
 .hero-copy h1 {
-  font-size: clamp(3rem, 5.2vw, 4.95rem);
-  line-height: 0.95;
-  max-width: 11ch;
+  font-size: clamp(2.7rem, 4.9vw, 4.45rem);
+  line-height: 0.94;
+  max-width: 10.5ch;
 }
 
 .igor-hero .hero-copy h1 {
-  max-width: 12ch;
+  max-width: 9.5ch;
 }
 
 .eyebrow,
@@ -123,9 +133,9 @@
 
 .hero-text {
   max-width: 60ch;
-  margin: 18px 0 0;
-  font-size: 1.04rem;
-  line-height: 1.72;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.64;
 }
 
 .hero-text span,
@@ -137,10 +147,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 24px;
+  margin-top: 4px;
 }
 
-.hero-tags span,
+.hero-chip,
 .preset,
 .toggle-item,
 .number-field input,
@@ -153,19 +163,37 @@
   border-radius: 22px;
 }
 
-.hero-tags span {
+.hero-chip {
+  appearance: none;
+  text-decoration: none;
   padding: 10px 14px;
   background: rgba(222, 171, 90, 0.13);
   border: 1px solid rgba(104, 69, 36, 0.14);
   color: var(--ink-strong);
+  font: inherit;
   font-size: 0.94rem;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.hero-chip:hover,
+.hero-chip:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(24, 92, 76, 0.24);
+  background: rgba(24, 92, 76, 0.08);
+  box-shadow: 0 12px 24px rgba(9, 37, 31, 0.08);
+  outline: none;
 }
 
 .hero-focus {
   display: grid;
   align-content: start;
-  gap: 18px;
-  padding: 24px;
+  gap: 16px;
+  padding: 22px;
   background:
     linear-gradient(160deg, rgba(16, 62, 52, 0.95), rgba(13, 46, 39, 0.92)),
     var(--felt-deep);
@@ -221,7 +249,7 @@
 .focus-size {
   margin: -4px 0 0;
   font-family: var(--font-display);
-  font-size: clamp(2.8rem, 5vw, 4.2rem);
+  font-size: clamp(2.55rem, 4.8vw, 3.95rem);
   line-height: 0.96;
   letter-spacing: -0.05em;
 }
@@ -292,14 +320,16 @@
   margin-bottom: 24px;
 }
 
-.igor-layout {
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
-  align-items: start;
+.igor-stack {
+  display: grid;
+  gap: 18px;
   margin-bottom: 24px;
 }
 
-.igor-layout.lower {
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
+.igor-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
 }
 
 .calculator,
@@ -324,8 +354,8 @@
 
 .section-head h2,
 .lesson-card h2 {
-  font-size: clamp(1.7rem, 3.1vw, 2.6rem);
-  line-height: 1.04;
+  font-size: clamp(1.6rem, 2.9vw, 2.35rem);
+  line-height: 1.06;
 }
 
 .number-field {
@@ -496,7 +526,7 @@
 .result-card {
   padding: 24px;
   animation: rise-in 0.75s ease both;
-  min-height: 206px;
+  min-height: 186px;
 }
 
 .result-card.primary {
@@ -649,6 +679,10 @@ tbody tr:hover td {
 }
 
 .mode-chip {
+  min-height: 54px;
+}
+
+.mode-chip {
   padding: 14px 16px;
   font-weight: 700;
   transition:
@@ -739,6 +773,10 @@ tbody tr:hover td {
   line-height: 1.65;
 }
 
+.tool-suite-head {
+  margin-bottom: 0;
+}
+
 .input-hint {
   margin: 16px 0 0;
   color: var(--ink-soft);
@@ -799,14 +837,14 @@ tbody tr:hover td {
   .hero-panel,
   .content-grid,
   .lesson-grid,
-  .igor-layout,
+  .igor-tool-grid,
   .preset-grid,
   .summary-grid {
     grid-template-columns: 1fr;
   }
 
   .hero-copy h1 {
-    max-width: 13ch;
+    max-width: 12ch;
   }
 
   .section-head {
@@ -844,13 +882,46 @@ tbody tr:hover td {
   .section-head h2,
   .lesson-card h2 {
     max-width: none;
-    font-size: clamp(2.15rem, 8vw, 3.15rem);
+    font-size: clamp(1.95rem, 8.6vw, 3rem);
+  }
+
+  .hero-copy {
+    gap: 12px;
+  }
+
+  .hero-text,
+  .table-note,
+  .footnote,
+  .igor-summary,
+  .input-hint {
+    font-size: 0.94rem;
+    line-height: 1.54;
+  }
+
+  .hero-chip {
+    width: fit-content;
+    font-size: 0.88rem;
+    padding: 9px 12px;
+  }
+
+  .hero-focus {
+    padding: 18px;
+  }
+
+  .focus-size {
+    font-size: clamp(2.15rem, 9vw, 3.15rem);
+  }
+
+  .result-card {
+    min-height: auto;
+    padding: 20px;
   }
 
   .toggle,
   .formula-strip,
   .inventory-switch,
-  .mode-switch {
+  .mode-switch,
+  .pot-mode-switch {
     grid-template-columns: 1fr;
   }
 
@@ -858,9 +929,29 @@ tbody tr:hover td {
     grid-template-columns: 1fr;
   }
 
+  .inline-fields {
+    flex-direction: column;
+  }
+
+  .number-field,
+  .compact-field {
+    min-width: 0;
+    width: 100%;
+  }
+
   .igor-output-grid,
   .igor-raw-grid {
     grid-template-columns: 1fr;
+  }
+
+  .igor-converter-grid,
+  .igor-tool-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .slider-scale {
+    font-size: 0.76rem;
+    gap: 6px;
   }
 
   th,
