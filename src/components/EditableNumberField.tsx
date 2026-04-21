@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { sanitizeNumber } from '../lib/pokerMath'
 
 type EditableNumberFieldProps = {
@@ -28,6 +28,17 @@ export function EditableNumberField({
 }: EditableNumberFieldProps) {
   const [draftValue, setDraftValue] = useState(String(value))
   const [isEditing, setIsEditing] = useState(false)
+  const pendingInternalValueRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (pendingInternalValueRef.current === value) {
+      pendingInternalValueRef.current = null
+      return
+    }
+
+    pendingInternalValueRef.current = null
+    setDraftValue(String(value))
+  }, [value])
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const nextRawValue = event.target.value
@@ -37,7 +48,9 @@ export function EditableNumberField({
       return
     }
 
-    onValueChange(sanitizeNumber(Number(nextRawValue), value, sanitizeMin, sanitizeMax))
+    const sanitizedValue = sanitizeNumber(Number(nextRawValue), value, sanitizeMin, sanitizeMax)
+    pendingInternalValueRef.current = sanitizedValue
+    onValueChange(sanitizedValue)
   }
 
   function normalizeDraftValue() {
@@ -46,6 +59,7 @@ export function EditableNumberField({
         ? sanitizeMin
         : sanitizeNumber(Number(draftValue), value, sanitizeMin, sanitizeMax)
 
+    pendingInternalValueRef.current = normalizedValue
     onValueChange(normalizedValue)
     setDraftValue(String(normalizedValue))
     setIsEditing(false)
