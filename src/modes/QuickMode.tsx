@@ -277,13 +277,14 @@ export function QuickMode({
 
         <div className="table-wrap">
           <table>
+            <caption>Шпаргалка по популярным сайзингам: фолды, баланс и защита.</caption>
             <thead>
               <tr>
-                <th>Ставка</th>
-                <th>Фолдов нужно</th>
-                <th>Value : Bluff</th>
-                <th>Блефов в ставке</th>
-                <th>MDF</th>
+                <th scope="col">Ставка</th>
+                <th scope="col">Фолдов нужно</th>
+                <th scope="col">Value : Bluff</th>
+                <th scope="col">Блефов в ставке</th>
+                <th scope="col">MDF</th>
               </tr>
             </thead>
             <tbody>

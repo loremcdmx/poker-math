@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type KeyboardEvent } from 'react'
 import './App.css'
 import { IgorMode } from './modes/IgorMode'
 import { QuickMode } from './modes/QuickMode'
@@ -11,21 +11,46 @@ function App() {
   const [betPercent, setBetPercent] = useState(50)
   const [displayMode, setDisplayMode] = useState<DisplayMode>('percent')
 
+  function handleModeTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentMode: AppMode) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (currentMode === 'quick') {
+      setAppMode('igor')
+      return
+    }
+
+    setAppMode('quick')
+  }
+
   return (
     <div className="app-shell">
-      <div className="mode-switch surface" role="group" aria-label="App mode">
+      <div className="mode-switch surface" role="tablist" aria-label="App mode">
         <button
-          aria-pressed={appMode === 'quick'}
+          aria-controls="quick-panel"
+          aria-selected={appMode === 'quick'}
           className={appMode === 'quick' ? 'mode-switch-item active' : 'mode-switch-item'}
+          id="quick-tab"
           onClick={() => setAppMode('quick')}
+          onKeyDown={(event) => handleModeTabKeyDown(event, 'quick')}
+          role="tab"
+          tabIndex={appMode === 'quick' ? 0 : -1}
           type="button"
         >
           Быстрый калькулятор
         </button>
         <button
-          aria-pressed={appMode === 'igor'}
+          aria-controls="igor-panel"
+          aria-selected={appMode === 'igor'}
           className={appMode === 'igor' ? 'mode-switch-item active' : 'mode-switch-item'}
+          id="igor-tab"
           onClick={() => setAppMode('igor')}
+          onKeyDown={(event) => handleModeTabKeyDown(event, 'igor')}
+          role="tab"
+          tabIndex={appMode === 'igor' ? 0 : -1}
           type="button"
         >
           Режим Игоря
@@ -33,14 +58,28 @@ function App() {
       </div>
 
       {appMode === 'quick' ? (
-        <QuickMode
-          betPercent={betPercent}
-          displayMode={displayMode}
-          onBetPercentChange={setBetPercent}
-          onDisplayModeChange={setDisplayMode}
-        />
+        <section
+          aria-labelledby="quick-tab"
+          id="quick-panel"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          <QuickMode
+            betPercent={betPercent}
+            displayMode={displayMode}
+            onBetPercentChange={setBetPercent}
+            onDisplayModeChange={setDisplayMode}
+          />
+        </section>
       ) : (
-        <IgorMode />
+        <section
+          aria-labelledby="igor-tab"
+          id="igor-panel"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          <IgorMode />
+        </section>
       )}
     </div>
   )

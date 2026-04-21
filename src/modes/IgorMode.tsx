@@ -495,15 +495,16 @@ export function IgorMode() {
 
         <div className="table-wrap">
           <table>
+            <caption>Лестница сайзингов для банка 100.</caption>
             <thead>
               <tr>
-                <th>Ставка</th>
-                <th>Блефов, %</th>
-                <th>Фолдов нужно</th>
-                <th>MDF</th>
-                <th>Bluff / Value</th>
-                <th>Value на 1 bluff</th>
-                <th>1 колл = фолдов</th>
+                <th scope="col">Ставка</th>
+                <th scope="col">Блефов, %</th>
+                <th scope="col">Фолдов нужно</th>
+                <th scope="col">MDF</th>
+                <th scope="col">Bluff / Value</th>
+                <th scope="col">Value на 1 bluff</th>
+                <th scope="col">1 колл = фолдов</th>
               </tr>
             </thead>
             <tbody>

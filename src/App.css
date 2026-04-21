@@ -45,6 +45,12 @@
   color: var(--felt-cream);
 }
 
+[role='tabpanel']:focus-visible {
+  outline: 2px solid rgba(24, 92, 76, 0.38);
+  outline-offset: 6px;
+  border-radius: 18px;
+}
+
 .surface,
 .result-card {
   background:
@@ -611,6 +617,13 @@ table {
   width: 100%;
   border-collapse: collapse;
   min-width: 640px;
+}
+
+caption {
+  padding: 0 0 12px;
+  text-align: left;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
 }
 
 th,
