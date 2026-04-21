@@ -4,6 +4,7 @@ import {
   formatBetLabel,
   formatRatio,
   formatShare,
+  pluralizeRu,
 } from '../lib/formatters'
 import {
   calculateMetrics,
@@ -167,7 +168,8 @@ export function QuickMode({
             <h3>{formatShare(metrics.breakEvenFe, displayMode)}</h3>
             <p>
               Мнемоника: ставка должна проходить{' '}
-              <strong>{metrics.feFraction.numerator}</strong> раз из{' '}
+              <strong>{metrics.feFraction.numerator}</strong>{' '}
+              {pluralizeRu(metrics.feFraction.numerator, ['раз', 'раза', 'раз'])} из{' '}
               <strong>{metrics.feFraction.denominator}</strong>. Обратная сторона той же
               дроби: <strong>MDF {formatShare(metrics.mdf, displayMode)}</strong>.
             </p>
@@ -182,9 +184,11 @@ export function QuickMode({
               )}
             </h3>
             <p>
-              Оппонент платит <strong>1</strong>, чтобы бороться за{' '}
-              <strong>{metrics.valueToBluff.numerator}</strong> части банка. Это то же
-              зеркало, что и <strong>value:bluff</strong>, просто с точки зрения колла.
+              Оппонент платит <strong>{metrics.valueToBluff.denominator}</strong>, чтобы
+              бороться за <strong>{metrics.valueToBluff.numerator}</strong>{' '}
+              {pluralizeRu(metrics.valueToBluff.numerator, ['часть', 'части', 'частей'])}{' '}
+              банка. Это то же зеркало, что и <strong>value:bluff</strong>, просто с точки
+              зрения колла.
             </p>
           </article>
 

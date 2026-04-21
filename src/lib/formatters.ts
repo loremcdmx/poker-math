@@ -88,3 +88,26 @@ export function formatRatio(left: number, right: number) {
     ratio.denominator,
   )}`
 }
+
+export function pluralizeRu(
+  count: number,
+  forms: readonly [string, string, string],
+) {
+  const abs = Math.abs(count) % 100
+
+  if (abs > 10 && abs < 20) {
+    return forms[2]
+  }
+
+  const tens = abs % 10
+
+  if (tens === 1) {
+    return forms[0]
+  }
+
+  if (tens >= 2 && tens <= 4) {
+    return forms[1]
+  }
+
+  return forms[2]
+}
