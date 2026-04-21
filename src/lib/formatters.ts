@@ -89,6 +89,25 @@ export function formatRatio(left: number, right: number) {
   )}`
 }
 
+export function describeRatioAccuracy(
+  approxLeft: number,
+  approxRight: number,
+  exactValue: number,
+) {
+  if (!Number.isFinite(exactValue) || exactValue <= 0 || approxRight <= 0) {
+    return { exactValue: 0, errorPercent: 0 }
+  }
+
+  const approxValue = approxLeft / approxRight
+  const errorPercent = (Math.abs(approxValue - exactValue) / exactValue) * 100
+
+  return { exactValue, errorPercent }
+}
+
+export function formatExactRatio(value: number) {
+  return `${decimalFormatter.format(value)}:1`
+}
+
 export function pluralizeRu(
   count: number,
   forms: readonly [string, string, string],

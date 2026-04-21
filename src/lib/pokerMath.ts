@@ -73,7 +73,7 @@ export function sanitizeNumber(value: number, fallback: number, min = 0.01, max 
 
 export function calculateMetrics(betMultiple: number) {
   const safeBetMultiple = Math.max(0.0001, betMultiple)
-  const betFraction = approximateFraction(safeBetMultiple)
+  const betFraction = approximateFraction(safeBetMultiple, 10)
   const breakEvenFe = safeBetMultiple / (1 + safeBetMultiple)
   const bluffShare = safeBetMultiple / (1 + 2 * safeBetMultiple)
   const mdf = 1 / (1 + safeBetMultiple)

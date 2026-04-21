@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { formatRatio, pluralizeRu } from './formatters'
+import {
+  describeRatioAccuracy,
+  formatExactRatio,
+  formatRatio,
+  pluralizeRu,
+} from './formatters'
 
 describe('formatRatio', () => {
   it('keeps already clean ratios intact', () => {
@@ -10,6 +15,33 @@ describe('formatRatio', () => {
   it('rounds noisy raw ratios to mnemonic-friendly parts', () => {
     expect(formatRatio(1467, 967)).toBe('3:2')
     expect(formatRatio(1999, 999)).toBe('2:1')
+  })
+})
+
+describe('describeRatioAccuracy', () => {
+  it('reports zero error when the approximation equals the exact value', () => {
+    const result = describeRatioAccuracy(3, 1, 3)
+    expect(result.exactValue).toBe(3)
+    expect(result.errorPercent).toBe(0)
+  })
+
+  it('reports the relative error between approximation and exact value', () => {
+    const exact = (1 + 1.41) / 1.41
+    const result = describeRatioAccuracy(12, 7, exact)
+    expect(result.exactValue).toBeCloseTo(1.7092, 4)
+    expect(result.errorPercent).toBeCloseTo(0.34, 1)
+  })
+
+  it('returns zeroed values when inputs are degenerate', () => {
+    expect(describeRatioAccuracy(1, 0, 1)).toEqual({ exactValue: 0, errorPercent: 0 })
+    expect(describeRatioAccuracy(1, 1, 0)).toEqual({ exactValue: 0, errorPercent: 0 })
+  })
+})
+
+describe('formatExactRatio', () => {
+  it('renders decimal ratios with ru-RU locale', () => {
+    expect(formatExactRatio(1.709)).toBe('1,71:1')
+    expect(formatExactRatio(3)).toBe('3:1')
   })
 })
 

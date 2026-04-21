@@ -1,7 +1,9 @@
 import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import {
+  describeRatioAccuracy,
   formatBetLabel,
+  formatExactRatio,
   formatRatio,
   formatShare,
   pluralizeRu,
@@ -25,6 +27,8 @@ const quickHeroActions = [
   { label: 'К шпаргалке', href: '#quick-cheatsheet' },
 ]
 
+const RATIO_ERROR_THRESHOLD_PERCENT = 0.5
+
 export function QuickMode({
   betPercent,
   displayMode,
@@ -32,6 +36,13 @@ export function QuickMode({
 }: QuickModeProps) {
   const betMultiple = betPercent / 100
   const metrics = calculateMetrics(betMultiple)
+  const exactValueToBluff = (1 + betMultiple) / betMultiple
+  const ratioAccuracy = describeRatioAccuracy(
+    metrics.valueToBluff.numerator,
+    metrics.valueToBluff.denominator,
+    exactValueToBluff,
+  )
+  const showRatioAccuracy = ratioAccuracy.errorPercent >= RATIO_ERROR_THRESHOLD_PERCENT
 
   return (
     <>
@@ -101,6 +112,7 @@ export function QuickMode({
             </div>
             <EditableNumberField
               ariaLabel="Bet size percent"
+              className="number-field bet-percent-field"
               inputMax={300}
               inputMin={1}
               label="Ставка, % банка"
@@ -173,6 +185,10 @@ export function QuickMode({
               <strong>{metrics.feFraction.denominator}</strong>. Обратная сторона той же
               дроби: <strong>MDF {formatShare(metrics.mdf, displayMode)}</strong>.
             </p>
+            <p className="card-footnote">
+              MDF (minimum defense frequency) — минимальная доля диапазона, которую надо
+              продолжать против ставки, чтобы чистый блеф не плюсовал автоматически.
+            </p>
           </article>
 
           <article className="result-card">
@@ -183,6 +199,12 @@ export function QuickMode({
                 metrics.valueToBluff.denominator,
               )}
             </h3>
+            {showRatioAccuracy ? (
+              <p className="ratio-exact">
+                точно {formatExactRatio(ratioAccuracy.exactValue)}, погрешность{' '}
+                ~{ratioAccuracy.errorPercent.toFixed(1)}%
+              </p>
+            ) : null}
             <p>
               Оппонент платит <strong>{metrics.valueToBluff.denominator}</strong>, чтобы
               бороться за <strong>{metrics.valueToBluff.numerator}</strong>{' '}
@@ -200,6 +222,12 @@ export function QuickMode({
                 metrics.valueToBluff.denominator,
               )}
             </h3>
+            {showRatioAccuracy ? (
+              <p className="ratio-exact">
+                точно {formatExactRatio(ratioAccuracy.exactValue)}, погрешность{' '}
+                ~{ratioAccuracy.errorPercent.toFixed(1)}%
+              </p>
+            ) : null}
             <p>
               Если FE читается как <strong>a/b</strong>, то balanced{' '}
               <strong>value:bluff = b:a</strong>. Запоминай зеркало, а не две разные цифры.
