@@ -561,6 +561,7 @@ function IgorMode() {
   const [bluffPot, setBluffPot] = useState(100)
   const [bluffBet, setBluffBet] = useState(50)
   const [bluffEquity, setBluffEquity] = useState(25)
+  const [bluffEquityInput, setBluffEquityInput] = useState('25')
   const [raisePot, setRaisePot] = useState(8)
   const [raiseBet, setRaiseBet] = useState(5)
   const [raiseTotal, setRaiseTotal] = useState(23)
@@ -601,6 +602,28 @@ function IgorMode() {
     }
 
     setIgorBet(nextBet)
+  }
+
+  function handleBluffEquityChange(nextRawValue: string) {
+    setBluffEquityInput(nextRawValue)
+
+    if (nextRawValue === '') {
+      return
+    }
+
+    setBluffEquity(sanitizeNumber(Number(nextRawValue), bluffEquity, 0, 100))
+  }
+
+  function normalizeBluffEquityInput() {
+    if (bluffEquityInput.trim() === '') {
+      setBluffEquity(0)
+      setBluffEquityInput('0')
+      return
+    }
+
+    const normalizedValue = sanitizeNumber(Number(bluffEquityInput), bluffEquity, 0, 100)
+    setBluffEquity(normalizedValue)
+    setBluffEquityInput(String(normalizedValue))
   }
 
   return (
@@ -1025,12 +1048,11 @@ function IgorMode() {
                 <input
                   min={0}
                   max={100}
-                  onChange={(event) =>
-                    setBluffEquity(sanitizeNumber(Number(event.target.value), bluffEquity, 0, 100))
-                  }
+                  onBlur={normalizeBluffEquityInput}
+                  onChange={(event) => handleBluffEquityChange(event.target.value)}
                   step={1}
                   type="number"
-                  value={bluffEquity}
+                  value={bluffEquityInput}
                 />
               </label>
             </div>
@@ -1067,6 +1089,15 @@ function IgorMode() {
             <strong>{formatPercent(bluffWithEquity.noFoldEquity)}</strong>, фолды вообще
             перестают быть обязательными, потому что колл сам по себе уже не делает ставку
             убыточной.
+          </p>
+
+          <p className="input-hint">
+            Это <strong>не</strong> порог для value-бета. Здесь сравнение идет с
+            <strong> give-up / нулевой реализацией</strong>: ставим блеф и смотрим, сколько
+            фолдов нужно, чтобы сама ставка не была минусовой. У value-бета другая база
+            сравнения: <strong>bet vs check</strong>. Поэтому на ривере value-бету действительно
+            нужно <strong>50%+ против calling range</strong> вне зависимости от сайза, а этому
+            виджету для semibluff хватает pot-odds-порога.
           </p>
         </section>
       </section>
