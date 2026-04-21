@@ -117,6 +117,7 @@ function calculateMetrics(betMultiple: number) {
   )
 
   return {
+    betFraction,
     breakEvenFe,
     bluffShare,
     mdf,
@@ -138,7 +139,7 @@ function App() {
       <header className="hero-panel surface">
         <div className="hero-copy">
           <p className="eyebrow">Poker Math / Fold Equity Compass</p>
-          <h1>Ставка, FE и value/bluff в одном спокойном калькуляторе.</h1>
+          <h1>Ставка, FE и value/bluff без путаницы и лишнего шума.</h1>
           <p className="hero-text">
             Введи размер ставки и сразу увидишь три разные вещи, которые часто
             смешивают: сколько нужно <span>fold equity</span> для нулевого
@@ -146,9 +147,9 @@ function App() {
             <span> value : bluff</span> баланс на ривере.
           </p>
           <div className="hero-tags">
-            <span>Risk / (Risk + Reward)</span>
-            <span>Odds = Value : Bluff</span>
-            <span>Не путай FE и bluff share</span>
+            <span>Риск / (риск + награда)</span>
+            <span>Odds = value : bluff</span>
+            <span>FE не равно bluff share</span>
           </div>
         </div>
 
@@ -178,6 +179,32 @@ function App() {
             Ты рискуешь <strong>{formatPotUnits(betMultiple)}</strong>, чтобы
             выиграть <strong>1P</strong>.
           </p>
+          <div className="focus-equation">
+            <span>Быстрая память</span>
+            <strong>
+              risk {metrics.betFraction.numerator}, reward{' '}
+              {metrics.betFraction.denominator}
+            </strong>
+          </div>
+          <div className="focus-metrics">
+            <div>
+              <span>0 EV FE</span>
+              <strong>{formatPercent(metrics.breakEvenFe)}</strong>
+            </div>
+            <div>
+              <span>Value : Bluff</span>
+              <strong>
+                {formatRatio(
+                  metrics.valueToBluff.numerator,
+                  metrics.valueToBluff.denominator,
+                )}
+              </strong>
+            </div>
+            <div>
+              <span>MDF</span>
+              <strong>{formatPercent(metrics.mdf)}</strong>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -271,25 +298,31 @@ function App() {
           </article>
 
           <article className="result-card">
-            <p className="card-label">Call odds для оппонента</p>
+            <p className="card-label">Pot odds для колла</p>
             <h3>
               {formatRatio(
                 metrics.valueToBluff.numerator,
                 metrics.valueToBluff.denominator,
               )}
             </h3>
-            <p>Столько он выигрывает к каждому 1, который докладывает.</p>
+            <p>
+              Оппонент вкладывает 1 часть колла, чтобы бороться за{' '}
+              {metrics.valueToBluff.numerator} части банка.
+            </p>
           </article>
 
           <article className="result-card">
-            <p className="card-label">Balanced river ratio</p>
+            <p className="card-label">Равновесный Value : Bluff</p>
             <h3>
               {formatRatio(
                 metrics.valueToBluff.numerator,
                 metrics.valueToBluff.denominator,
               )}
             </h3>
-            <p>Value : bluff. Это та самая памятка “2:1 на pot bet”.</p>
+            <p>
+              Та же дробь, что и у pot odds. Для выбранного сайзинга value и
+              bluff читаются одним отношением.
+            </p>
           </article>
 
           <article className="result-card">
@@ -335,23 +368,23 @@ function App() {
 
         <article className="surface lesson-card">
           <p className="kicker">Мнемоника</p>
-          <h2>Нормализуй pot до 1 и считай через риск к награде.</h2>
+          <h2>Нормализуй банк до 1 и считай через риск к награде.</h2>
           <ul className="memory-list">
             <li>
-              <strong>1/2 pot</strong> means risk 1 to win 2, so{' '}
+              <strong>1/2 pot</strong>: риск 1, выигрыш 2, значит{' '}
               <strong>1 / 3 FE</strong>
             </li>
             <li>
-              <strong>1 pot</strong> means risk 1 to win 1, so{' '}
+              <strong>1 pot</strong>: риск 1, выигрыш 1, значит{' '}
               <strong>1 / 2 FE</strong>
             </li>
             <li>
-              <strong>2x pot</strong> means risk 2 to win 1, so{' '}
+              <strong>2x pot</strong>: риск 2, выигрыш 1, значит{' '}
               <strong>2 / 3 FE</strong>
             </li>
             <li>
-              <strong>Odds = Value : Bluff</strong>:
-              <span> 3:1, 2:1, 3:2 для 1/2 pot, pot, 2x pot.</span>
+              <strong>Запоминай одной дробью</strong>:
+              <span> 3:1, 2:1, 3:2 одновременно и pot odds, и value:bluff.</span>
             </li>
           </ul>
         </article>
@@ -364,8 +397,8 @@ function App() {
             <h2>Популярные сайзинги</h2>
           </div>
           <p className="table-note">
-            Для ривера и любых spot-ов, где ты хочешь быстро оценить 0 EV bluff и
-            ratio value/bluff.
+            Для ривера и любых spot-ов, где нужно быстро оценить 0 EV bluff,
+            value:bluff и защиту против ставки.
           </p>
         </div>
 
