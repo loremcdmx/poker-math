@@ -3,7 +3,10 @@ import { expect, test, devices } from '@playwright/test'
 test('quick mode hero chips navigate to useful sections', async ({ page }) => {
   await page.goto('/')
 
-  const input = page.getByRole('spinbutton', { name: 'Bet size percent' })
+  await page.getByRole('button', { name: 'Дроби' }).click()
+  await expect(page.locator('#quick-panel .focus-size')).toHaveText('1/2 банка')
+
+  const input = page.getByRole('textbox', { name: 'Bet size percent' })
   const slider = page.getByRole('slider', { name: 'Bet size slider' })
 
   await input.click()
@@ -36,11 +39,13 @@ test('igor mode mobile layout stays narrow and hero actions are useful', async (
   })
 
   await page.goto('/')
+  await page.getByRole('button', { name: 'Дроби' }).click()
   await page.getByRole('tab', { name: 'Режим Игоря' }).click()
   await page.getByRole('button', { name: 'Пот как в клиенте' }).click()
 
   await expect(page.getByText('Спот в формате клиента')).toBeVisible()
   await expect(page.getByText('Банк в клиенте')).toBeVisible()
+  await expect(page.locator('#igor-panel .focus-metrics strong').nth(2)).toHaveText('4/5 банка')
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

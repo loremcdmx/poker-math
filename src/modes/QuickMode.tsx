@@ -2,9 +2,8 @@ import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import {
   formatBetLabel,
-  formatPercent,
-  formatPotUnits,
   formatRatio,
+  formatShare,
 } from '../lib/formatters'
 import {
   calculateMetrics,
@@ -16,7 +15,6 @@ type QuickModeProps = {
   betPercent: number
   displayMode: DisplayMode
   onBetPercentChange: (value: number) => void
-  onDisplayModeChange: (value: DisplayMode) => void
 }
 
 const quickHeroActions = [
@@ -30,7 +28,6 @@ export function QuickMode({
   betPercent,
   displayMode,
   onBetPercentChange,
-  onDisplayModeChange,
 }: QuickModeProps) {
   const betMultiple = betPercent / 100
   const metrics = calculateMetrics(betMultiple)
@@ -54,29 +51,10 @@ export function QuickMode({
         </div>
 
         <div className="hero-focus">
-          <div className="toggle" role="group" aria-label="Display mode">
-            <button
-              aria-pressed={displayMode === 'percent'}
-              className={displayMode === 'percent' ? 'toggle-item active' : 'toggle-item'}
-              onClick={() => onDisplayModeChange('percent')}
-              type="button"
-            >
-              Проценты
-            </button>
-            <button
-              aria-pressed={displayMode === 'fraction'}
-              className={displayMode === 'fraction' ? 'toggle-item active' : 'toggle-item'}
-              onClick={() => onDisplayModeChange('fraction')}
-              type="button"
-            >
-              Дроби
-            </button>
-          </div>
-
           <p className="focus-label">Текущий сайзинг</p>
           <p className="focus-size">{formatBetLabel(betMultiple, displayMode)}</p>
           <p className="focus-subtitle">
-            Ты рискуешь <strong>{formatPotUnits(betMultiple)}</strong>, чтобы забрать{' '}
+            Ты рискуешь <strong>{formatBetLabel(betMultiple, displayMode)}</strong>, чтобы забрать{' '}
             <strong>1 банк</strong>.
           </p>
           <div className="focus-equation">
@@ -94,7 +72,7 @@ export function QuickMode({
           <div className="focus-metrics">
             <div>
               <span>Фолдов нужно</span>
-              <strong>{formatPercent(metrics.breakEvenFe)}</strong>
+              <strong>{formatShare(metrics.breakEvenFe, displayMode)}</strong>
             </div>
             <div>
               <span>Value на 1 bluff</span>
@@ -107,7 +85,7 @@ export function QuickMode({
             </div>
             <div>
               <span>Защита MDF</span>
-              <strong>{formatPercent(metrics.mdf)}</strong>
+              <strong>{formatShare(metrics.mdf, displayMode)}</strong>
             </div>
           </div>
         </div>
@@ -128,6 +106,7 @@ export function QuickMode({
               onValueChange={onBetPercentChange}
               sanitizeMax={300}
               sanitizeMin={1}
+              step={0.1}
               value={betPercent}
             />
           </div>
@@ -139,7 +118,7 @@ export function QuickMode({
               max={300}
               min={1}
               onChange={(event) => onBetPercentChange(Number(event.target.value))}
-              step={1}
+              step={0.1}
               type="range"
               value={betPercent}
             />
@@ -164,7 +143,7 @@ export function QuickMode({
                   type="button"
                 >
                   <span>{formatBetLabel(size, displayMode)}</span>
-                  <small>{formatPercent(calculateMetrics(size).breakEvenFe)} фолдов нужно</small>
+                  <small>{formatShare(calculateMetrics(size).breakEvenFe, displayMode)} фолдов нужно</small>
                 </button>
               )
             })}
@@ -185,12 +164,12 @@ export function QuickMode({
         <section className="summary-grid jump-target" id="quick-summary">
           <article className="result-card primary">
             <p className="card-label">Фолдов нужно для нуля</p>
-            <h3>{formatPercent(metrics.breakEvenFe)}</h3>
+            <h3>{formatShare(metrics.breakEvenFe, displayMode)}</h3>
             <p>
               Мнемоника: ставка должна проходить{' '}
               <strong>{metrics.feFraction.numerator}</strong> раз из{' '}
               <strong>{metrics.feFraction.denominator}</strong>. Обратная сторона той же
-              дроби: <strong>MDF {formatPercent(metrics.mdf)}</strong>.
+              дроби: <strong>MDF {formatShare(metrics.mdf, displayMode)}</strong>.
             </p>
           </article>
 
@@ -225,7 +204,7 @@ export function QuickMode({
 
           <article className="result-card">
             <p className="card-label">Блефов в ставке</p>
-            <h3>{formatPercent(metrics.bluffShare)}</h3>
+            <h3>{formatShare(metrics.bluffShare, displayMode)}</h3>
             <p>
               Это доля блефов в betting range, а не процент фолдов, который нужен. На
               ривере эта же цифра совпадает с <strong>equity без FE</strong>.
@@ -240,12 +219,13 @@ export function QuickMode({
           <h2>Один и тот же сайзинг одновременно говорит про фолды, колл и баланс.</h2>
           <div className="warning-points">
             <p>
-              <strong>{formatPercent(metrics.breakEvenFe)}</strong> нужно, чтобы чистый блеф не
+              <strong>{formatShare(metrics.breakEvenFe, displayMode)}</strong> нужно, чтобы чистый блеф не
               терял деньги.
             </p>
             <p>
-              <strong>{formatPercent(metrics.breakEvenFe)}</strong> +{' '}
-              <strong>{formatPercent(metrics.mdf)}</strong> = <span>100%</span>. Помни одну
+              <strong>{formatShare(metrics.breakEvenFe, displayMode)}</strong> +{' '}
+              <strong>{formatShare(metrics.mdf, displayMode)}</strong> ={' '}
+              <span>{displayMode === 'percent' ? '100%' : '1'}</span>. Помни одну
               цифру, вторая всегда дополняет ее.
             </p>
             <p>
@@ -322,15 +302,15 @@ export function QuickMode({
                 return (
                   <tr className={isActive ? 'active-row' : undefined} key={size}>
                     <td>{formatBetLabel(size, displayMode)}</td>
-                    <td>{formatPercent(row.breakEvenFe)}</td>
+                    <td>{formatShare(row.breakEvenFe, displayMode)}</td>
                     <td>
                       {formatRatio(
                         row.valueToBluff.numerator,
                         row.valueToBluff.denominator,
                       )}
                     </td>
-                    <td>{formatPercent(row.bluffShare)}</td>
-                    <td>{formatPercent(row.mdf)}</td>
+                    <td>{formatShare(row.bluffShare, displayMode)}</td>
+                    <td>{formatShare(row.mdf, displayMode)}</td>
                   </tr>
                 )
               })}
@@ -345,7 +325,7 @@ export function QuickMode({
             {metrics.valueToBluff.numerator} value / {metrics.valueToBluff.denominator} bluff
           </strong>{' '}
           на ривере, а защищать против такого сайзинга нужно примерно{' '}
-          <strong>{formatPercent(metrics.mdf)}</strong> диапазона.
+          <strong>{formatShare(metrics.mdf, displayMode)}</strong> диапазона.
         </p>
       </section>
     </>

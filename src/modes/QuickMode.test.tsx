@@ -11,7 +11,6 @@ describe('QuickMode', () => {
         betPercent={50}
         displayMode="percent"
         onBetPercentChange={vi.fn()}
-        onDisplayModeChange={vi.fn()}
       />,
     )
 
@@ -36,14 +35,13 @@ describe('QuickMode', () => {
           betPercent={betPercent}
           displayMode="percent"
           onBetPercentChange={setBetPercent}
-          onDisplayModeChange={vi.fn()}
         />
       )
     }
 
     render(<QuickModeHarness />)
 
-    const input = screen.getByRole('spinbutton', { name: 'Bet size percent' })
+    const input = screen.getByRole('textbox', { name: 'Bet size percent' })
     const slider = screen.getByRole('slider', { name: 'Bet size slider' })
 
     await user.click(input)
@@ -52,6 +50,30 @@ describe('QuickMode', () => {
 
     fireEvent.change(slider, { target: { value: '100' } })
 
-    expect(input).toHaveValue(100)
+    expect(input).toHaveValue('100')
+  })
+
+  it('keeps slider aligned when bet input uses decimal values', () => {
+    function QuickModeHarness() {
+      const [betPercent, setBetPercent] = useState(50)
+
+      return (
+        <QuickMode
+          betPercent={betPercent}
+          displayMode="percent"
+          onBetPercentChange={setBetPercent}
+        />
+      )
+    }
+
+    render(<QuickModeHarness />)
+
+    const input = screen.getByRole('textbox', { name: 'Bet size percent' })
+    const slider = screen.getByRole('slider', { name: 'Bet size slider' }) as HTMLInputElement
+
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: '140.5' } })
+
+    expect(slider.value).toBe('140.5')
   })
 })

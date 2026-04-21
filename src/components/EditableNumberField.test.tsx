@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { EditableNumberField } from './EditableNumberField'
+import { parseInputNumber } from './editableNumberFieldUtils'
 
 function EditableNumberFieldHarness() {
   const [value, setValue] = useState(140)
@@ -36,12 +37,18 @@ describe('EditableNumberField', () => {
 
     render(<EditableNumberFieldHarness />)
 
-    const input = screen.getByRole('spinbutton', { name: 'Test number field' })
+    const input = screen.getByRole('textbox', { name: 'Test number field' })
 
     await user.click(input)
     await user.click(screen.getByRole('button', { name: 'Set to 100' }))
 
     expect(input).toHaveFocus()
-    expect(input).toHaveValue(100)
+    expect(input).toHaveValue('100')
+  })
+
+  it('parses comma decimals as numeric input', () => {
+    expect(parseInputNumber('140,5')).toBe(140.5)
+    expect(parseInputNumber('140.5')).toBe(140.5)
+    expect(parseInputNumber('')).toBeNull()
   })
 })

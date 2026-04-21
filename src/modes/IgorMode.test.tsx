@@ -7,7 +7,7 @@ describe('IgorMode', () => {
   it('makes the hero chips actionable instead of decorative', async () => {
     const user = userEvent.setup()
 
-    render(<IgorMode />)
+    render(<IgorMode displayMode="percent" />)
 
     expect(screen.getByText('Текущий спот')).toBeInTheDocument()
 

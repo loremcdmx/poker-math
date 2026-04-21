@@ -28,33 +28,57 @@ function App() {
 
   return (
     <div className="app-shell">
-      <div className="mode-switch surface" role="tablist" aria-label="App mode">
-        <button
-          aria-controls="quick-panel"
-          aria-selected={appMode === 'quick'}
-          className={appMode === 'quick' ? 'mode-switch-item active' : 'mode-switch-item'}
-          id="quick-tab"
-          onClick={() => setAppMode('quick')}
-          onKeyDown={(event) => handleModeTabKeyDown(event, 'quick')}
-          role="tab"
-          tabIndex={appMode === 'quick' ? 0 : -1}
-          type="button"
-        >
-          Быстрый калькулятор
-        </button>
-        <button
-          aria-controls="igor-panel"
-          aria-selected={appMode === 'igor'}
-          className={appMode === 'igor' ? 'mode-switch-item active' : 'mode-switch-item'}
-          id="igor-tab"
-          onClick={() => setAppMode('igor')}
-          onKeyDown={(event) => handleModeTabKeyDown(event, 'igor')}
-          role="tab"
-          tabIndex={appMode === 'igor' ? 0 : -1}
-          type="button"
-        >
-          Режим Игоря
-        </button>
+      <div className="app-toolbar">
+        <div className="mode-switch surface" role="tablist" aria-label="App mode">
+          <button
+            aria-controls="quick-panel"
+            aria-selected={appMode === 'quick'}
+            className={appMode === 'quick' ? 'mode-switch-item active' : 'mode-switch-item'}
+            id="quick-tab"
+            onClick={() => setAppMode('quick')}
+            onKeyDown={(event) => handleModeTabKeyDown(event, 'quick')}
+            role="tab"
+            tabIndex={appMode === 'quick' ? 0 : -1}
+            type="button"
+          >
+            Быстрый калькулятор
+          </button>
+          <button
+            aria-controls="igor-panel"
+            aria-selected={appMode === 'igor'}
+            className={appMode === 'igor' ? 'mode-switch-item active' : 'mode-switch-item'}
+            id="igor-tab"
+            onClick={() => setAppMode('igor')}
+            onKeyDown={(event) => handleModeTabKeyDown(event, 'igor')}
+            role="tab"
+            tabIndex={appMode === 'igor' ? 0 : -1}
+            type="button"
+          >
+            Режим Игоря
+          </button>
+        </div>
+
+        <div className="global-display surface" role="group" aria-label="Global display mode">
+          <span className="global-display-label">Показ</span>
+          <div className="global-display-toggle">
+            <button
+              aria-pressed={displayMode === 'percent'}
+              className={displayMode === 'percent' ? 'global-display-item active' : 'global-display-item'}
+              onClick={() => setDisplayMode('percent')}
+              type="button"
+            >
+              Проценты
+            </button>
+            <button
+              aria-pressed={displayMode === 'fraction'}
+              className={displayMode === 'fraction' ? 'global-display-item active' : 'global-display-item'}
+              onClick={() => setDisplayMode('fraction')}
+              type="button"
+            >
+              Дроби
+            </button>
+          </div>
+        </div>
       </div>
 
       {appMode === 'quick' ? (
@@ -68,7 +92,6 @@ function App() {
             betPercent={betPercent}
             displayMode={displayMode}
             onBetPercentChange={setBetPercent}
-            onDisplayModeChange={setDisplayMode}
           />
         </section>
       ) : (
@@ -78,7 +101,7 @@ function App() {
           role="tabpanel"
           tabIndex={0}
         >
-          <IgorMode />
+          <IgorMode displayMode={displayMode} />
         </section>
       )}
     </div>

@@ -19,6 +19,26 @@ export function formatPercent(value: number) {
   return `${percentFormatter.format(value * 100)}%`
 }
 
+export function formatFraction(value: number, maxDenominator = 10) {
+  const fraction = approximateFraction(value, maxDenominator)
+
+  if (fraction.denominator === 1) {
+    return integerFormatter.format(fraction.numerator)
+  }
+
+  return `${integerFormatter.format(fraction.numerator)}/${integerFormatter.format(
+    fraction.denominator,
+  )}`
+}
+
+export function formatShare(value: number, mode: DisplayMode, maxDenominator = 10) {
+  if (mode === 'percent') {
+    return formatPercent(value)
+  }
+
+  return formatFraction(value, maxDenominator)
+}
+
 export function formatPotUnits(value: number) {
   return `${decimalFormatter.format(value)} банка`
 }
@@ -44,7 +64,7 @@ export function formatBetLabel(value: number, mode: DisplayMode) {
     return `${percentFormatter.format(value * 100)}% банка`
   }
 
-  const fraction = approximateFraction(value)
+  const fraction = approximateFraction(value, 10)
 
   if (fraction.denominator === 1) {
     if (fraction.numerator === 1) {
@@ -58,5 +78,13 @@ export function formatBetLabel(value: number, mode: DisplayMode) {
 }
 
 export function formatRatio(left: number, right: number) {
-  return `${left}:${right}`
+  if (!Number.isFinite(left) || !Number.isFinite(right) || left <= 0 || right <= 0) {
+    return `${integerFormatter.format(0)}:${integerFormatter.format(0)}`
+  }
+
+  const ratio = approximateFraction(left / right, 10)
+
+  return `${integerFormatter.format(ratio.numerator)}:${integerFormatter.format(
+    ratio.denominator,
+  )}`
 }

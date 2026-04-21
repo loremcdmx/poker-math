@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import {
+  formatBetLabel,
   formatDecimal,
   formatInteger,
-  formatPercent,
+  formatShare,
   formatSheetPercent,
   formatSheetRoundedPercent,
 } from '../lib/formatters'
@@ -14,6 +15,7 @@ import {
   calculateMetrics,
   calculateRaiseMetrics,
   igorLadderBets,
+  type DisplayMode,
   type IgorInventoryMode,
   type PotInputMode,
   sanitizeNumber,
@@ -23,7 +25,11 @@ function scrollToSection(sectionId: string) {
   document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-export function IgorMode() {
+type IgorModeProps = {
+  displayMode: DisplayMode
+}
+
+export function IgorMode({ displayMode }: IgorModeProps) {
   const [potInputMode, setPotInputMode] = useState<PotInputMode>('clean')
   const [knownMode, setKnownMode] = useState<IgorInventoryMode>('value')
   const [igorPot, setIgorPot] = useState(24)
@@ -127,7 +133,7 @@ export function IgorMode() {
               <>
                 Банк <strong>{formatDecimal(inventory.safePot)}</strong>, ставка{' '}
                 <strong>{formatDecimal(inventory.safeBet)}</strong>, колл по шансам{' '}
-                <strong>{formatPercent(inventory.oddsPercent)}</strong>.
+                <strong>{formatShare(inventory.oddsPercent, displayMode)}</strong>.
               </>
             )}
           </p>
@@ -138,11 +144,11 @@ export function IgorMode() {
             </div>
             <div>
               <span>Блефов в ставке</span>
-              <strong>{formatPercent(inventory.bluffShareTotal)}</strong>
+              <strong>{formatShare(inventory.bluffShareTotal, displayMode)}</strong>
             </div>
             <div>
               <span>Сайзинг</span>
-              <strong>{formatPercent(inventory.betPercentOfPot)}</strong>
+              <strong>{formatBetLabel(inventory.betPercentOfPot, displayMode)}</strong>
             </div>
           </div>
         </div>
@@ -283,7 +289,7 @@ export function IgorMode() {
           <div className="igor-output-grid">
             <article className="sheet-card">
               <span>Колл по шансам</span>
-              <strong>{formatPercent(inventory.oddsPercent)}</strong>
+              <strong>{formatShare(inventory.oddsPercent, displayMode)}</strong>
             </article>
             <article className="sheet-card">
               <span>Блефов на 1 value</span>
@@ -291,7 +297,7 @@ export function IgorMode() {
             </article>
             <article className="sheet-card">
               <span>Блефов в ставке</span>
-              <strong>{formatPercent(inventory.bluffShareTotal)}</strong>
+              <strong>{formatShare(inventory.bluffShareTotal, displayMode)}</strong>
             </article>
             <article className="sheet-card">
               <span>{knownMode === 'value' ? 'Можно добавить bluff' : 'Нужно value'}</span>
@@ -316,7 +322,7 @@ export function IgorMode() {
           ) : null}
           : <strong>{formatDecimal(inventory.valueCount)} value</strong> дают{' '}
           <strong>{formatDecimal(inventory.bluffCount)} bluff</strong>. Вся ставка при этом
-          содержит <strong>{formatPercent(inventory.bluffShareTotal)}</strong> блефов. И эта
+          содержит <strong>{formatShare(inventory.bluffShareTotal, displayMode)}</strong> блефов. И эта
           же цифра одновременно равна <strong>equity на колл</strong> против ставки.
         </p>
       </section>
@@ -380,7 +386,7 @@ export function IgorMode() {
             <div className="igor-output-grid raise-grid">
               <article className="sheet-card dark">
                 <span>Фолдов нужно</span>
-                <strong>{formatPercent(raiseMetrics.feNeeded)}</strong>
+                <strong>{formatShare(raiseMetrics.feNeeded, displayMode)}</strong>
               </article>
               <article className="sheet-card">
                 <span>Доплата на колл</span>
@@ -399,7 +405,7 @@ export function IgorMode() {
             <p className="igor-summary">
               Здесь коллботу надо доплатить <strong>{formatDecimal(raiseMetrics.callAmount)}</strong>{' '}
               за банк <strong>{formatDecimal(raiseMetrics.finalPotIfCall)}</strong>, то есть ему
-              хватает примерно <strong>{formatPercent(raiseMetrics.callerEqRequired)}</strong>{' '}
+              хватает примерно <strong>{formatShare(raiseMetrics.callerEqRequired, displayMode)}</strong>{' '}
               equity на колл. Это всегда читается как <strong>доплата / финальный банк</strong>,
               а не как твой total. Если это мало, рейз часто просто получает слишком широкий колл.
             </p>
@@ -451,30 +457,30 @@ export function IgorMode() {
             <div className="igor-output-grid raise-grid">
               <article className="sheet-card dark">
                 <span>Фолдов нужно с этой equity</span>
-                <strong>{formatPercent(bluffWithEquity.feWithEquity)}</strong>
+                <strong>{formatShare(bluffWithEquity.feWithEquity, displayMode)}</strong>
               </article>
               <article className="sheet-card">
                 <span>Чистый блеф просил бы</span>
-                <strong>{formatPercent(bluffWithEquity.pureFe)}</strong>
+                <strong>{formatShare(bluffWithEquity.pureFe, displayMode)}</strong>
               </article>
               <article className="sheet-card">
                 <span>Эквити без FE</span>
-                <strong>{formatPercent(bluffWithEquity.noFoldEquity)}</strong>
+                <strong>{formatShare(bluffWithEquity.noFoldEquity, displayMode)}</strong>
               </article>
               <article className="sheet-card">
                 <span>FE экономия</span>
-                <strong>{formatPercent(bluffWithEquity.savedFe)}</strong>
+                <strong>{formatShare(bluffWithEquity.savedFe, displayMode)}</strong>
               </article>
             </div>
 
             <p className="igor-summary">
               Проверка математики: при банке <strong>{formatDecimal(bluffPot)}</strong> и ставке{' '}
               <strong>{formatDecimal(bluffBet)}</strong> чистый блеф просит{' '}
-              <strong>{formatPercent(bluffWithEquity.pureFe)}</strong> фолдов. Если при колле у
-              тебя есть <strong>{formatPercent(bluffWithEquity.safeEquity)}</strong> equity, то
-              блефу нужно уже не <strong>{formatPercent(bluffWithEquity.pureFe)}</strong>, а{' '}
-              <strong>{formatPercent(bluffWithEquity.feWithEquity)}</strong> фолдов. А порог{' '}
-              <strong>{formatPercent(bluffWithEquity.noFoldEquity)}</strong> это как раз та же
+              <strong>{formatShare(bluffWithEquity.pureFe, displayMode)}</strong> фолдов. Если при колле у
+              тебя есть <strong>{formatShare(bluffWithEquity.safeEquity, displayMode)}</strong> equity, то
+              блефу нужно уже не <strong>{formatShare(bluffWithEquity.pureFe, displayMode)}</strong>, а{' '}
+              <strong>{formatShare(bluffWithEquity.feWithEquity, displayMode)}</strong> фолдов. А порог{' '}
+              <strong>{formatShare(bluffWithEquity.noFoldEquity, displayMode)}</strong> это как раз та же
               цифра, что и <strong>bluff share</strong> у river-ставки такого же сайзинга.
             </p>
 
@@ -524,10 +530,26 @@ export function IgorMode() {
 
                 return (
                   <tr key={bet}>
-                    <td>{formatInteger(bet)}</td>
-                    <td>{formatSheetPercent(metrics.bluffShare)}</td>
-                    <td>{formatSheetRoundedPercent(metrics.breakEvenFe)}</td>
-                    <td>{formatSheetRoundedPercent(metrics.mdf)}</td>
+                    <td>
+                      {displayMode === 'percent'
+                        ? `${formatInteger(bet)}%`
+                        : formatBetLabel(bet / 100, displayMode)}
+                    </td>
+                    <td>
+                      {displayMode === 'percent'
+                        ? formatSheetPercent(metrics.bluffShare)
+                        : formatShare(metrics.bluffShare, displayMode)}
+                    </td>
+                    <td>
+                      {displayMode === 'percent'
+                        ? formatSheetRoundedPercent(metrics.breakEvenFe)
+                        : formatShare(metrics.breakEvenFe, displayMode)}
+                    </td>
+                    <td>
+                      {displayMode === 'percent'
+                        ? formatSheetRoundedPercent(metrics.mdf)
+                        : formatShare(metrics.mdf, displayMode)}
+                    </td>
                     <td>{formatDecimal(metrics.breakEvenFe)}</td>
                     <td>
                       {formatDecimal(

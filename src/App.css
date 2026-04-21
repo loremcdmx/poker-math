@@ -4,6 +4,15 @@
   padding: 32px 0 56px;
 }
 
+.app-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 18px;
+  margin-bottom: 18px;
+}
+
 .jump-target {
   scroll-margin-top: 18px;
 }
@@ -14,8 +23,60 @@
   gap: 8px;
   width: min(100%, 560px);
   padding: 8px;
-  margin-bottom: 18px;
+  margin-bottom: 0;
   border-radius: 24px;
+}
+
+.global-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 14px;
+  border-radius: 24px;
+}
+
+.global-display-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.global-display-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border-radius: 18px;
+  background: rgba(24, 92, 76, 0.06);
+}
+
+.global-display-item {
+  border: none;
+  border-radius: 14px;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.global-display-item:hover,
+.global-display-item:focus-visible {
+  background: rgba(24, 92, 76, 0.08);
+  color: var(--ink-strong);
+  outline: none;
+}
+
+.global-display-item.active {
+  background: linear-gradient(135deg, rgba(24, 92, 76, 0.95), rgba(15, 58, 48, 0.92));
+  color: var(--felt-cream);
 }
 
 .mode-switch-item {
@@ -888,6 +949,15 @@ tbody tr:hover td {
     padding: 16px 0 32px;
   }
 
+  .app-toolbar {
+    gap: 12px;
+  }
+
+  .global-display {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .hero-panel,
   .calculator,
   .lesson-card,
@@ -946,7 +1016,8 @@ tbody tr:hover td {
   .preset-grid,
   .summary-grid,
   .igor-output-grid,
-  .igor-raw-grid {
+  .igor-raw-grid,
+  .global-display-toggle {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1008,7 +1079,8 @@ tbody tr:hover td {
   .summary-grid,
   .igor-output-grid,
   .igor-raw-grid,
-  .focus-metrics {
+  .focus-metrics,
+  .global-display-toggle {
     grid-template-columns: 1fr;
   }
 }
