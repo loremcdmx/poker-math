@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  approximateFraction,
   calculateBluffWithEquity,
   calculateIgorInventory,
   calculateMetrics,
@@ -33,6 +34,19 @@ describe('poker math helpers', () => {
     expect(result.finalPotIfCall).toBe(54)
     expect(result.feNeeded).toBeCloseTo(23 / 36, 6)
     expect(result.callerEqRequired).toBeCloseTo(1 / 3, 6)
+  })
+
+  it('keeps value:bluff sane for small bets below the usual fraction grid', () => {
+    const result = calculateMetrics(0.02)
+
+    expect(result.betFraction).toEqual({ numerator: 1, denominator: 50 })
+    expect(result.valueToBluff).toEqual({ numerator: 51, denominator: 1 })
+    expect(result.breakEvenFe).toBeCloseTo(1 / 51, 6)
+  })
+
+  it('falls back to 1/round(1/value) when the denominator grid rounds to zero', () => {
+    expect(approximateFraction(0.02)).toEqual({ numerator: 1, denominator: 50 })
+    expect(approximateFraction(0.01)).toEqual({ numerator: 1, denominator: 100 })
   })
 
   it('reduces required fold equity when the bluff has 25% equity', () => {

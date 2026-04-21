@@ -52,6 +52,10 @@ export function approximateFraction(value: number, maxDenominator = 16): Fractio
     }
   }
 
+  if (best.numerator === 0 && value > 0) {
+    return simplifyFraction(1, Math.max(1, Math.round(1 / value)))
+  }
+
   return best
 }
 
