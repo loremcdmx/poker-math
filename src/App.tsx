@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import './App.css'
 
 type AppMode = 'quick' | 'igor'
@@ -83,6 +83,77 @@ function sanitizeNumber(value: number, fallback: number, min = 0.01, max = 10000
   }
 
   return clamp(value, min, max)
+}
+
+type EditableNumberFieldProps = {
+  ariaLabel?: string
+  className?: string
+  inputMax?: number
+  inputMin?: number
+  label: string
+  onValueChange: (value: number) => void
+  sanitizeMax?: number
+  sanitizeMin?: number
+  step?: number
+  value: number
+}
+
+function EditableNumberField({
+  ariaLabel,
+  className = 'number-field',
+  inputMax,
+  inputMin,
+  label,
+  onValueChange,
+  sanitizeMax = 100000,
+  sanitizeMin = 0.01,
+  step = 1,
+  value,
+}: EditableNumberFieldProps) {
+  const [draftValue, setDraftValue] = useState(String(value))
+  const [isEditing, setIsEditing] = useState(false)
+
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    const nextRawValue = event.target.value
+    setDraftValue(nextRawValue)
+
+    if (nextRawValue === '') {
+      return
+    }
+
+    onValueChange(sanitizeNumber(Number(nextRawValue), value, sanitizeMin, sanitizeMax))
+  }
+
+  function normalizeDraftValue() {
+    const normalizedValue =
+      draftValue.trim() === ''
+        ? sanitizeMin
+        : sanitizeNumber(Number(draftValue), value, sanitizeMin, sanitizeMax)
+
+    onValueChange(normalizedValue)
+    setDraftValue(String(normalizedValue))
+    setIsEditing(false)
+  }
+
+  return (
+    <label className={className}>
+      <span>{label}</span>
+      <input
+        aria-label={ariaLabel}
+        max={inputMax}
+        min={inputMin}
+        onBlur={normalizeDraftValue}
+        onFocus={() => {
+          setDraftValue(String(value))
+          setIsEditing(true)
+        }}
+        onChange={handleChange}
+        step={step}
+        type="number"
+        value={isEditing ? draftValue : String(value)}
+      />
+    </label>
+  )
 }
 
 function formatPercent(value: number) {
@@ -333,20 +404,16 @@ function QuickMode({
               <p className="kicker">Калькулятор</p>
               <h2>Размер ставки</h2>
             </div>
-            <label className="number-field">
-              <span>Ставка, % банка</span>
-              <input
-                aria-label="Bet size percent"
-                max={300}
-                min={1}
-                onChange={(event) =>
-                  setBetPercent(sanitizeNumber(Number(event.target.value), betPercent, 1, 300))
-                }
-                step={1}
-                type="number"
-                value={betPercent}
-              />
-            </label>
+            <EditableNumberField
+              ariaLabel="Bet size percent"
+              inputMax={300}
+              inputMin={1}
+              label="Ставка, % банка"
+              onValueChange={setBetPercent}
+              sanitizeMax={300}
+              sanitizeMin={1}
+              value={betPercent}
+            />
           </div>
 
           <div className="slider-block">
@@ -561,7 +628,6 @@ function IgorMode() {
   const [bluffPot, setBluffPot] = useState(100)
   const [bluffBet, setBluffBet] = useState(50)
   const [bluffEquity, setBluffEquity] = useState(25)
-  const [bluffEquityInput, setBluffEquityInput] = useState('25')
   const [raisePot, setRaisePot] = useState(8)
   const [raiseBet, setRaiseBet] = useState(5)
   const [raiseTotal, setRaiseTotal] = useState(23)
@@ -602,28 +668,6 @@ function IgorMode() {
     }
 
     setIgorBet(nextBet)
-  }
-
-  function handleBluffEquityChange(nextRawValue: string) {
-    setBluffEquityInput(nextRawValue)
-
-    if (nextRawValue === '') {
-      return
-    }
-
-    setBluffEquity(sanitizeNumber(Number(nextRawValue), bluffEquity, 0, 100))
-  }
-
-  function normalizeBluffEquityInput() {
-    if (bluffEquityInput.trim() === '') {
-      setBluffEquity(0)
-      setBluffEquityInput('0')
-      return
-    }
-
-    const normalizedValue = sanitizeNumber(Number(bluffEquityInput), bluffEquity, 0, 100)
-    setBluffEquity(normalizedValue)
-    setBluffEquityInput(String(normalizedValue))
   }
 
   return (
@@ -716,35 +760,22 @@ function IgorMode() {
 
           <div className="section-head compact section-head-stack">
             <div className="inline-fields">
-              <label className="number-field compact-field">
-                <span>{potInputMode === 'client' ? 'Банк в клиенте' : 'Банк до ставки'}</span>
-                <input
-                  min={0}
-                  onChange={(event) =>
-                    setIgorPot(
-                      sanitizeNumber(
-                        Number(event.target.value),
-                        igorPot,
-                        0.01,
-                        100000,
-                      ),
-                    )
-                  }
-                  step={1}
-                  type="number"
-                  value={igorPot}
-                />
-              </label>
-              <label className="number-field compact-field">
-                <span>Ставка</span>
-                <input
-                  min={1}
-                  onChange={(event) => handleIgorBetChange(Number(event.target.value))}
-                  step={1}
-                  type="number"
-                  value={igorBet}
-                />
-              </label>
+              <EditableNumberField
+                className="number-field compact-field"
+                inputMin={0}
+                label={potInputMode === 'client' ? 'Банк в клиенте' : 'Банк до ставки'}
+                onValueChange={setIgorPot}
+                sanitizeMin={0.01}
+                value={igorPot}
+              />
+              <EditableNumberField
+                className="number-field compact-field"
+                inputMin={1}
+                label="Ставка"
+                onValueChange={handleIgorBetChange}
+                sanitizeMin={1}
+                value={igorBet}
+              />
             </div>
           </div>
 
@@ -816,18 +847,13 @@ function IgorMode() {
           </div>
 
           <div className="igor-converter-grid">
-            <label className="number-field">
-              <span>{knownMode === 'value' ? 'Сколько value' : 'Сколько bluff'}</span>
-              <input
-                min={0}
-                onChange={(event) =>
-                  setKnownCount(sanitizeNumber(Number(event.target.value), knownCount, 0, 100000))
-                }
-                step={1}
-                type="number"
-                value={knownCount}
-              />
-            </label>
+            <EditableNumberField
+              inputMin={0}
+              label={knownMode === 'value' ? 'Сколько value' : 'Сколько bluff'}
+              onValueChange={setKnownCount}
+              sanitizeMin={0}
+              value={knownCount}
+            />
 
             <div className="igor-output-grid">
               <article className="sheet-card">
@@ -934,42 +960,30 @@ function IgorMode() {
           </div>
 
           <div className="inline-fields">
-            <label className="number-field compact-field">
-              <span>Банк до ставки</span>
-              <input
-                min={0}
-                onChange={(event) =>
-                  setRaisePot(sanitizeNumber(Number(event.target.value), raisePot, 0.01, 100000))
-                }
-                step={1}
-                type="number"
-                value={raisePot}
-              />
-            </label>
-            <label className="number-field compact-field">
-              <span>Ставка оппа</span>
-              <input
-                min={0}
-                onChange={(event) =>
-                  setRaiseBet(sanitizeNumber(Number(event.target.value), raiseBet, 0.01, 100000))
-                }
-                step={1}
-                type="number"
-                value={raiseBet}
-              />
-            </label>
-            <label className="number-field compact-field">
-              <span>Наш рейз total</span>
-              <input
-                min={0}
-                onChange={(event) =>
-                  setRaiseTotal(sanitizeNumber(Number(event.target.value), raiseTotal, 0.01, 100000))
-                }
-                step={1}
-                type="number"
-                value={raiseTotal}
-              />
-            </label>
+            <EditableNumberField
+              className="number-field compact-field"
+              inputMin={0}
+              label="Банк до ставки"
+              onValueChange={setRaisePot}
+              sanitizeMin={0.01}
+              value={raisePot}
+            />
+            <EditableNumberField
+              className="number-field compact-field"
+              inputMin={0}
+              label="Ставка оппа"
+              onValueChange={setRaiseBet}
+              sanitizeMin={0.01}
+              value={raiseBet}
+            />
+            <EditableNumberField
+              className="number-field compact-field"
+              inputMin={0}
+              label="Наш рейз total"
+              onValueChange={setRaiseTotal}
+              sanitizeMin={0.01}
+              value={raiseTotal}
+            />
           </div>
 
           <p className="input-hint">
@@ -1019,42 +1033,32 @@ function IgorMode() {
 
           <div className="section-head compact section-head-stack">
             <div className="inline-fields">
-              <label className="number-field compact-field">
-                <span>Банк</span>
-                <input
-                  min={0}
-                  onChange={(event) =>
-                    setBluffPot(sanitizeNumber(Number(event.target.value), bluffPot, 0.01, 100000))
-                  }
-                  step={1}
-                  type="number"
-                  value={bluffPot}
-                />
-              </label>
-              <label className="number-field compact-field">
-                <span>Ставка</span>
-                <input
-                  min={0}
-                  onChange={(event) =>
-                    setBluffBet(sanitizeNumber(Number(event.target.value), bluffBet, 0.01, 100000))
-                  }
-                  step={1}
-                  type="number"
-                  value={bluffBet}
-                />
-              </label>
-              <label className="number-field compact-field">
-                <span>Эквити при колле, %</span>
-                <input
-                  min={0}
-                  max={100}
-                  onBlur={normalizeBluffEquityInput}
-                  onChange={(event) => handleBluffEquityChange(event.target.value)}
-                  step={1}
-                  type="number"
-                  value={bluffEquityInput}
-                />
-              </label>
+              <EditableNumberField
+                className="number-field compact-field"
+                inputMin={0}
+                label="Банк"
+                onValueChange={setBluffPot}
+                sanitizeMin={0.01}
+                value={bluffPot}
+              />
+              <EditableNumberField
+                className="number-field compact-field"
+                inputMin={0}
+                label="Ставка"
+                onValueChange={setBluffBet}
+                sanitizeMin={0.01}
+                value={bluffBet}
+              />
+              <EditableNumberField
+                className="number-field compact-field"
+                inputMax={100}
+                inputMin={0}
+                label="Эквити при колле, %"
+                onValueChange={setBluffEquity}
+                sanitizeMax={100}
+                sanitizeMin={0}
+                value={bluffEquity}
+              />
             </div>
           </div>
 
