@@ -558,6 +558,8 @@ function IgorMode() {
   const [igorPot, setIgorPot] = useState(24)
   const [igorBet, setIgorBet] = useState(19)
   const [knownCount, setKnownCount] = useState(88)
+  const [bluffPot, setBluffPot] = useState(100)
+  const [bluffBet, setBluffBet] = useState(50)
   const [bluffEquity, setBluffEquity] = useState(25)
   const [raisePot, setRaisePot] = useState(8)
   const [raiseBet, setRaiseBet] = useState(5)
@@ -572,8 +574,8 @@ function IgorMode() {
   )
   const raiseMetrics = calculateRaiseMetrics(raisePot, raiseBet, raiseTotal)
   const bluffWithEquity = calculateBluffWithEquity(
-    inventory.safePot,
-    inventory.safeBet,
+    bluffPot,
+    bluffBet,
     bluffEquity,
   )
 
@@ -995,6 +997,30 @@ function IgorMode() {
           <div className="section-head compact section-head-stack">
             <div className="inline-fields">
               <label className="number-field compact-field">
+                <span>Банк</span>
+                <input
+                  min={0}
+                  onChange={(event) =>
+                    setBluffPot(sanitizeNumber(Number(event.target.value), bluffPot, 0.01, 100000))
+                  }
+                  step={1}
+                  type="number"
+                  value={bluffPot}
+                />
+              </label>
+              <label className="number-field compact-field">
+                <span>Ставка</span>
+                <input
+                  min={0}
+                  onChange={(event) =>
+                    setBluffBet(sanitizeNumber(Number(event.target.value), bluffBet, 0.01, 100000))
+                  }
+                  step={1}
+                  type="number"
+                  value={bluffBet}
+                />
+              </label>
+              <label className="number-field compact-field">
                 <span>Эквити при колле, %</span>
                 <input
                   min={0}
@@ -1020,23 +1046,27 @@ function IgorMode() {
               <strong>{formatPercent(bluffWithEquity.pureFe)}</strong>
             </article>
             <article className="sheet-card">
-              <span>FE экономия</span>
-              <strong>{formatPercent(bluffWithEquity.savedFe)}</strong>
+              <span>Эквити без FE</span>
+              <strong>{formatPercent(bluffWithEquity.noFoldEquity)}</strong>
             </article>
             <article className="sheet-card">
-              <span>EV при колле</span>
-              <strong>{formatDecimal(bluffWithEquity.calledEv)}</strong>
+              <span>FE экономия</span>
+              <strong>{formatPercent(bluffWithEquity.savedFe)}</strong>
             </article>
           </div>
 
           <p className="igor-summary">
-            Для текущего спота с банком <strong>{formatDecimal(inventory.safePot)}</strong> и
-            ставкой <strong>{formatDecimal(inventory.safeBet)}</strong>:
-            при <strong>{formatPercent(bluffWithEquity.safeEquity)}</strong> equity
+            Проверка математики: при банке <strong>{formatDecimal(bluffPot)}</strong> и
+            ставке <strong>{formatDecimal(bluffBet)}</strong> чистый блеф просит{' '}
+            <strong>{formatPercent(bluffWithEquity.pureFe)}</strong> фолдов.
+            Если при колле у тебя есть <strong>{formatPercent(bluffWithEquity.safeEquity)}</strong>{' '}
+            equity, то
             блефу нужно уже не <strong>{formatPercent(bluffWithEquity.pureFe)}</strong>, а{' '}
             <strong>{formatPercent(bluffWithEquity.feWithEquity)}</strong> фолдов.
-            Как только equity дотягивает до <strong>{formatPercent(bluffWithEquity.noFoldEquity)}</strong>,
-            фолды вообще перестают быть обязательными.
+            Как только equity дотягивает до{' '}
+            <strong>{formatPercent(bluffWithEquity.noFoldEquity)}</strong>, фолды вообще
+            перестают быть обязательными, потому что колл сам по себе уже не делает ставку
+            убыточной.
           </p>
         </section>
       </section>
