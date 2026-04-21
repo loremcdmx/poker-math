@@ -296,6 +296,13 @@
   color: var(--felt-cream);
 }
 
+.focus-equation p {
+  margin: 0;
+  color: rgba(255, 248, 236, 0.74);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .focus-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

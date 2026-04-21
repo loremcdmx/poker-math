@@ -44,7 +44,8 @@ export function QuickMode({
           <p className="hero-text">
             Один сайзинг сразу отвечает на три вопроса: <span>breakeven FE</span>,
             какие <span>pot odds</span> получает колл и сколько{' '}
-            <span>value на 1 bluff</span> можно держать на ривере.
+            <span>value на 1 bluff</span> можно держать на ривере. Бонус-мнемоника:
+            <span> FE + MDF всегда дают 100%</span>.
           </p>
           <HeroActionChips
             ariaLabel="Быстрые переходы быстрого калькулятора"
@@ -83,6 +84,12 @@ export function QuickMode({
             <strong>
               риск {metrics.betFraction.numerator}, награда {metrics.betFraction.denominator}
             </strong>
+            <p>
+              FE = {metrics.betFraction.numerator}/
+              {metrics.betFraction.denominator + metrics.betFraction.numerator}, MDF ={' '}
+              {metrics.betFraction.denominator}/
+              {metrics.betFraction.denominator + metrics.betFraction.numerator}
+            </p>
           </div>
           <div className="focus-metrics">
             <div>
@@ -182,7 +189,8 @@ export function QuickMode({
             <p>
               Мнемоника: ставка должна проходить{' '}
               <strong>{metrics.feFraction.numerator}</strong> раз из{' '}
-              <strong>{metrics.feFraction.denominator}</strong>.
+              <strong>{metrics.feFraction.denominator}</strong>. Обратная сторона той же
+              дроби: <strong>MDF {formatPercent(metrics.mdf)}</strong>.
             </p>
           </article>
 
@@ -196,7 +204,8 @@ export function QuickMode({
             </h3>
             <p>
               Оппонент платит <strong>1</strong>, чтобы бороться за{' '}
-              <strong>{metrics.valueToBluff.numerator}</strong> части банка.
+              <strong>{metrics.valueToBluff.numerator}</strong> части банка. Это то же
+              зеркало, что и <strong>value:bluff</strong>, просто с точки зрения колла.
             </p>
           </article>
 
@@ -208,13 +217,19 @@ export function QuickMode({
                 metrics.valueToBluff.denominator,
               )}
             </h3>
-            <p>Та же дробь, что и у шансов банка. Запоминай один ratio вместо двух.</p>
+            <p>
+              Если FE читается как <strong>a/b</strong>, то balanced{' '}
+              <strong>value:bluff = b:a</strong>. Запоминай зеркало, а не две разные цифры.
+            </p>
           </article>
 
           <article className="result-card">
             <p className="card-label">Блефов в ставке</p>
             <h3>{formatPercent(metrics.bluffShare)}</h3>
-            <p>Это доля блефов в betting range, а не процент фолдов, который нужен.</p>
+            <p>
+              Это доля блефов в betting range, а не процент фолдов, который нужен. На
+              ривере эта же цифра совпадает с <strong>equity без FE</strong>.
+            </p>
           </article>
         </section>
       </main>
@@ -227,6 +242,11 @@ export function QuickMode({
             <p>
               <strong>{formatPercent(metrics.breakEvenFe)}</strong> нужно, чтобы чистый блеф не
               терял деньги.
+            </p>
+            <p>
+              <strong>{formatPercent(metrics.breakEvenFe)}</strong> +{' '}
+              <strong>{formatPercent(metrics.mdf)}</strong> = <span>100%</span>. Помни одну
+              цифру, вторая всегда дополняет ее.
             </p>
             <p>
               <strong>
@@ -256,6 +276,13 @@ export function QuickMode({
               <strong>2 / 3 фолдов</strong>.
             </li>
             <li>
+              <strong>Общее правило для n/d банка</strong>:
+              <span>
+                {' '}
+                FE = n/(n+d), MDF = d/(n+d), а bluff share = n/(d+2n).
+              </span>
+            </li>
+            <li>
               <strong>Запоминай одной дробью</strong>:
               <span> 3:1, 2:1, 3:2 подходят и для колла, и для value:bluff.</span>
             </li>
@@ -271,7 +298,7 @@ export function QuickMode({
           </div>
           <p className="table-note">
             Быстрая память для ривера: сколько фолдов нужно, какой колл ты даешь и сколько
-            блефов можно держать.
+            блефов можно держать. Здесь же видно, как FE и MDF дополняют друг друга до 100%.
           </p>
         </div>
 

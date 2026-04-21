@@ -156,7 +156,9 @@ export function IgorMode() {
           </div>
           <p className="table-note">
             Это основной рабочий калькулятор. Вводишь пот и ставку, а дальше сразу видишь
-            колл по шансам, bluff share и перевод из одной стороны диапазона в другую.
+            колл по шансам, bluff share и перевод из одной стороны диапазона в другую. Здесь
+            удобно помнить, что <strong>одна и та же цифра B/(P+2B)</strong> живет и как
+            bluff share, и как equity на колл.
           </p>
         </div>
 
@@ -314,7 +316,8 @@ export function IgorMode() {
           ) : null}
           : <strong>{formatDecimal(inventory.valueCount)} value</strong> дают{' '}
           <strong>{formatDecimal(inventory.bluffCount)} bluff</strong>. Вся ставка при этом
-          содержит <strong>{formatPercent(inventory.bluffShareTotal)}</strong> блефов.
+          содержит <strong>{formatPercent(inventory.bluffShareTotal)}</strong> блефов. И эта
+          же цифра одновременно равна <strong>equity на колл</strong> против ставки.
         </p>
       </section>
 
@@ -369,7 +372,9 @@ export function IgorMode() {
             <p className="input-hint">
               Мнемоника для коллбота: он смотрит на <strong>доплату</strong> и на{' '}
               <strong>финальный банк</strong>. Если доплата маленькая относительно банка, колл
-              получается слишком вкусным.
+              получается слишком вкусным. Короткая лестница памяти: <strong>1 в 1 = 50%</strong>,{' '}
+              <strong>1 в 2 = 33%</strong>, <strong>1 в 3 = 25%</strong>,{' '}
+              <strong>1 в 4 = 20%</strong>.
             </p>
 
             <div className="igor-output-grid raise-grid">
@@ -395,7 +400,8 @@ export function IgorMode() {
               Здесь коллботу надо доплатить <strong>{formatDecimal(raiseMetrics.callAmount)}</strong>{' '}
               за банк <strong>{formatDecimal(raiseMetrics.finalPotIfCall)}</strong>, то есть ему
               хватает примерно <strong>{formatPercent(raiseMetrics.callerEqRequired)}</strong>{' '}
-              equity на колл. Если это мало, рейз часто просто получает слишком широкий колл.
+              equity на колл. Это всегда читается как <strong>доплата / финальный банк</strong>,
+              а не как твой total. Если это мало, рейз часто просто получает слишком широкий колл.
             </p>
           </section>
 
@@ -407,7 +413,7 @@ export function IgorMode() {
               </div>
               <p className="table-note">
                 Не все блефы «мертвые». Если при колле у тебя остается equity, часть работы за
-                FE уже делает доезд.
+                FE уже делает доезд. Самая полезная мнемоника тут: <strong>bluff share = call equity = equity без FE</strong>.
               </p>
             </div>
 
@@ -467,7 +473,9 @@ export function IgorMode() {
               <strong>{formatPercent(bluffWithEquity.pureFe)}</strong> фолдов. Если при колле у
               тебя есть <strong>{formatPercent(bluffWithEquity.safeEquity)}</strong> equity, то
               блефу нужно уже не <strong>{formatPercent(bluffWithEquity.pureFe)}</strong>, а{' '}
-              <strong>{formatPercent(bluffWithEquity.feWithEquity)}</strong> фолдов.
+              <strong>{formatPercent(bluffWithEquity.feWithEquity)}</strong> фолдов. А порог{' '}
+              <strong>{formatPercent(bluffWithEquity.noFoldEquity)}</strong> это как раз та же
+              цифра, что и <strong>bluff share</strong> у river-ставки такого же сайзинга.
             </p>
 
             <p className="input-hint">
@@ -475,7 +483,8 @@ export function IgorMode() {
               <strong> give-up / нулевой реализацией</strong>: ставим блеф и смотрим, сколько
               фолдов нужно, чтобы сама ставка не была минусовой. Поэтому на ривере value-бету
               действительно нужно <strong>50%+ против calling range</strong>, а этому виджету
-              для semibluff хватает pot-odds-порога.
+              для semibluff хватает pot-odds-порога. В формулах это одна и та же точка:{' '}
+              <strong>B / (P + 2B)</strong>.
             </p>
           </section>
         </div>
@@ -489,7 +498,9 @@ export function IgorMode() {
           </div>
           <p className="table-note">
             Здесь живет reference-таблица: сколько фолдов нужно, сколько bluff на 1 value и
-            сколько защиты требуется при стандартных сайзингах.
+            сколько защиты требуется при стандартных сайзингах. Удобно смотреть как{' '}
+            <strong>FE и MDF</strong> складываются в 100%, а <strong>1 колл = фолдов</strong>{' '}
+            повторяет размер ставки в банках.
           </p>
         </div>
 
