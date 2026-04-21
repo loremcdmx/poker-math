@@ -4,6 +4,43 @@
   padding: 32px 0 56px;
 }
 
+.mode-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: min(100%, 520px);
+  padding: 8px;
+  margin-bottom: 18px;
+  border-radius: 24px;
+}
+
+.mode-switch-item {
+  border: none;
+  border-radius: 16px;
+  padding: 14px 18px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.mode-switch-item:hover,
+.mode-switch-item:focus-visible {
+  background: rgba(24, 92, 76, 0.08);
+  color: var(--ink-strong);
+  outline: none;
+}
+
+.mode-switch-item.active {
+  background: linear-gradient(135deg, rgba(24, 92, 76, 0.95), rgba(15, 58, 48, 0.92));
+  color: var(--felt-cream);
+}
+
 .surface,
 .result-card {
   background:
@@ -18,7 +55,8 @@
 
 .hero-panel,
 .content-grid,
-.lesson-grid {
+.lesson-grid,
+.igor-layout {
   display: grid;
   gap: 24px;
 }
@@ -47,6 +85,10 @@
   font-size: clamp(3rem, 5.2vw, 4.95rem);
   line-height: 0.95;
   max-width: 11ch;
+}
+
+.igor-hero .hero-copy h1 {
+  max-width: 12ch;
 }
 
 .eyebrow,
@@ -240,15 +282,32 @@
   line-height: 1.2;
 }
 
+.igor-focus .focus-size {
+  font-size: clamp(2.5rem, 4.4vw, 3.5rem);
+}
+
 .content-grid {
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.95fr);
   align-items: start;
   margin-bottom: 24px;
 }
 
+.igor-layout {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+.igor-layout.lower {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
+}
+
 .calculator,
 .cheat-table,
-.lesson-card {
+.lesson-card,
+.igor-converter,
+.igor-raises,
+.igor-notes {
   padding: 28px;
 }
 
@@ -275,6 +334,16 @@
   min-width: 110px;
   font-size: 0.88rem;
   color: var(--ink-soft);
+}
+
+.inline-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.compact-field {
+  min-width: 124px;
 }
 
 .number-field input {
@@ -551,6 +620,148 @@ tbody tr:hover td {
   font-size: 0.98rem;
 }
 
+.inventory-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.mode-chip,
+.quick-chip {
+  border: 1px solid rgba(58, 38, 23, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 251, 244, 0.88);
+  color: var(--ink-strong);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mode-chip {
+  padding: 14px 16px;
+  font-weight: 700;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.mode-chip.active {
+  background: linear-gradient(135deg, rgba(24, 92, 76, 0.95), rgba(15, 58, 48, 0.92));
+  border-color: rgba(24, 92, 76, 0.4);
+  color: var(--felt-cream);
+}
+
+.quick-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.quick-chip {
+  padding: 10px 14px;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.quick-chip:hover,
+.quick-chip:focus-visible,
+.mode-chip:hover,
+.mode-chip:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(9, 37, 31, 0.08);
+}
+
+.igor-converter-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+.igor-output-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sheet-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(58, 38, 23, 0.1);
+  background: rgba(255, 252, 246, 0.86);
+}
+
+.sheet-card.dark {
+  background: linear-gradient(135deg, rgba(24, 92, 76, 0.95), rgba(15, 58, 48, 0.92));
+  color: var(--felt-cream);
+}
+
+.sheet-card span {
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.sheet-card.dark span,
+.sheet-card.dark strong {
+  color: inherit;
+}
+
+.sheet-card strong {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  line-height: 0.96;
+  color: var(--ink-strong);
+}
+
+.igor-summary {
+  margin: 18px 0 0;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.raise-grid {
+  margin-top: 22px;
+}
+
+.igor-raw-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.raw-note {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(58, 38, 23, 0.1);
+  background: rgba(255, 252, 246, 0.86);
+}
+
+.raw-note h3 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  color: var(--ink-strong);
+}
+
+.raw-note p {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.raw-note p + p {
+  margin-top: 6px;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -567,6 +778,7 @@ tbody tr:hover td {
   .hero-panel,
   .content-grid,
   .lesson-grid,
+  .igor-layout,
   .preset-grid,
   .summary-grid {
     grid-template-columns: 1fr;
@@ -584,6 +796,10 @@ tbody tr:hover td {
   .focus-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .igor-converter-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -595,7 +811,10 @@ tbody tr:hover td {
   .hero-panel,
   .calculator,
   .lesson-card,
-  .cheat-table {
+  .cheat-table,
+  .igor-converter,
+  .igor-raises,
+  .igor-notes {
     padding: 20px;
     border-radius: 24px;
   }
@@ -608,11 +827,18 @@ tbody tr:hover td {
   }
 
   .toggle,
-  .formula-strip {
+  .formula-strip,
+  .inventory-switch,
+  .mode-switch {
     grid-template-columns: 1fr;
   }
 
   .focus-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .igor-output-grid,
+  .igor-raw-grid {
     grid-template-columns: 1fr;
   }
 
