@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+:root {
+  --bg-top: #e4efe1;
+  --bg-bottom: #c9dbc8;
+  --felt: #1d6b59;
+  --felt-deep: #103d33;
+  --felt-cream: #fff4de;
+  --gold: #ecb55a;
+  --ink: #2c2017;
+  --ink-strong: #1f140d;
+  --ink-soft: rgba(44, 32, 23, 0.74);
+  --accent-ink: #8e5b24;
+  --font-ui: 'Space Grotesk', sans-serif;
+  --font-display: 'Instrument Serif', serif;
+
+  font-family: var(--font-ui);
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(255, 248, 232, 0.72), transparent 34%),
+    linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 248, 232, 0.82), transparent 22%),
+    radial-gradient(circle at 80% 10%, rgba(236, 181, 90, 0.18), transparent 18%),
+    linear-gradient(180deg, #e6efe3 0%, #d7e4d2 28%, #cddcc9 100%);
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(16, 61, 51, 0.2), transparent 26%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 40%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(16, 61, 51, 0.03) 0,
+      rgba(16, 61, 51, 0.03) 1px,
+      transparent 1px,
+      transparent 32px
+    );
+  pointer-events: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+#root {
+  isolation: isolate;
+}
