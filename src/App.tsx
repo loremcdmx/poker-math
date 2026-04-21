@@ -3,6 +3,7 @@ import './App.css'
 
 type AppMode = 'quick' | 'igor'
 type DisplayMode = 'percent' | 'fraction'
+type PotInputMode = 'clean' | 'client'
 type Fraction = {
   numerator: number
   denominator: number
@@ -161,13 +162,15 @@ function calculateMetrics(betMultiple: number) {
 }
 
 function calculateIgorInventory(
-  pot: number,
+  potInput: number,
   bet: number,
+  potInputMode: PotInputMode,
   knownMode: IgorInventoryMode,
   knownCount: number,
 ) {
-  const safePot = Math.max(0.01, pot)
   const safeBet = Math.max(0.01, bet)
+  const safePotInput = Math.max(potInputMode === 'client' ? safeBet + 0.01 : 0.01, potInput)
+  const safePot = potInputMode === 'client' ? safePotInput - safeBet : safePotInput
   const safeCount = Math.max(0, knownCount)
   const bluffPerValue = safeBet / (safePot + safeBet)
   const valuePerBluff = (safePot + safeBet) / safeBet
@@ -177,9 +180,11 @@ function calculateIgorInventory(
   const bluffCount = knownMode === 'bluff' ? safeCount : safeCount * bluffPerValue
 
   return {
+    safePotInput,
     safePot,
     safeBet,
     safeCount,
+    clientPot: safePot + safeBet,
     bluffPerValue,
     valuePerBluff,
     oddsPercent,
@@ -523,6 +528,7 @@ function QuickMode({
 }
 
 function IgorMode() {
+  const [potInputMode, setPotInputMode] = useState<PotInputMode>('clean')
   const [knownMode, setKnownMode] = useState<IgorInventoryMode>('value')
   const [igorPot, setIgorPot] = useState(24)
   const [igorBet, setIgorBet] = useState(19)
@@ -531,8 +537,38 @@ function IgorMode() {
   const [raiseBet, setRaiseBet] = useState(5)
   const [raiseTotal, setRaiseTotal] = useState(23)
 
-  const inventory = calculateIgorInventory(igorPot, igorBet, knownMode, knownCount)
+  const inventory = calculateIgorInventory(
+    igorPot,
+    igorBet,
+    potInputMode,
+    knownMode,
+    knownCount,
+  )
   const raiseMetrics = calculateRaiseMetrics(raisePot, raiseBet, raiseTotal)
+
+  function switchPotInputMode(nextMode: PotInputMode) {
+    if (nextMode === potInputMode) {
+      return
+    }
+
+    setIgorPot((currentPot) =>
+      nextMode === 'client' ? currentPot + igorBet : Math.max(1, currentPot - igorBet),
+    )
+    setPotInputMode(nextMode)
+  }
+
+  function handleIgorBetChange(nextValue: number) {
+    const nextBet = sanitizeNumber(nextValue, igorBet, 1, 100000)
+
+    if (potInputMode === 'client') {
+      setIgorPot((currentPot) => {
+        const cleanPot = Math.max(1, currentPot - igorBet)
+        return cleanPot + nextBet
+      })
+    }
+
+    setIgorBet(nextBet)
+  }
 
   return (
     <>
@@ -543,23 +579,42 @@ function IgorMode() {
           <p className="hero-text">
             Здесь я перенес дух таблички: ladder для банка <span>100</span>,
             режим “я знаю число <span>велью</span>” или “я знаю число{' '}
-            <span>блефов</span>”, отдельный блок для <span>рейзов</span> и raw
-            заметки из нижней части листа.
+            <span>блефов</span>”, режим <span>покерного клиента</span>,
+            отдельный блок для <span>рейзов</span> и raw заметки из нижней
+            части листа.
           </p>
           <div className="hero-tags">
             <span>Pot = 100 ladder</span>
             <span>Value / Bluff converter</span>
+            <span>Пот как в клиенте</span>
             <span>Raise FE / Call EQ</span>
           </div>
         </div>
 
         <div className="hero-focus igor-focus">
-          <p className="focus-label">Текущий пример из листа</p>
-          <p className="focus-size">{formatDecimal(inventory.safePot)} / {formatDecimal(inventory.safeBet)}</p>
+          <p className="focus-label">
+            {potInputMode === 'client' ? 'Режим покерного клиента' : 'Текущий пример из листа'}
+          </p>
+          <p className="focus-size">
+            {formatDecimal(
+              potInputMode === 'client' ? inventory.safePotInput : inventory.safePot,
+            )}{' '}
+            / {formatDecimal(inventory.safeBet)}
+          </p>
           <p className="focus-subtitle">
-            Pot <strong>{formatDecimal(inventory.safePot)}</strong>, bet{' '}
-            <strong>{formatDecimal(inventory.safeBet)}</strong>, odds{' '}
-            <strong>{formatPercent(inventory.oddsPercent)}</strong>.
+            {potInputMode === 'client' ? (
+              <>
+                Клиент показывает pot <strong>{formatDecimal(inventory.safePotInput)}</strong>.
+                Для математики это <strong>{formatDecimal(inventory.safePot)}</strong> до
+                ставки и bet <strong>{formatDecimal(inventory.safeBet)}</strong>.
+              </>
+            ) : (
+              <>
+                Pot <strong>{formatDecimal(inventory.safePot)}</strong>, bet{' '}
+                <strong>{formatDecimal(inventory.safeBet)}</strong>, odds{' '}
+                <strong>{formatPercent(inventory.oddsPercent)}</strong>.
+              </>
+            )}
           </p>
           <div className="focus-metrics">
             <div>
@@ -585,13 +640,40 @@ function IgorMode() {
               <p className="kicker">Конвертер</p>
               <h2>Я знаю число велью или блефов</h2>
             </div>
+          </div>
+
+          <div className="pot-mode-switch" role="group" aria-label="Pot input mode">
+            <button
+              className={potInputMode === 'clean' ? 'mode-chip active' : 'mode-chip'}
+              onClick={() => switchPotInputMode('clean')}
+              type="button"
+            >
+              Чистый пот
+            </button>
+            <button
+              className={potInputMode === 'client' ? 'mode-chip active' : 'mode-chip'}
+              onClick={() => switchPotInputMode('client')}
+              type="button"
+            >
+              Режим клиента
+            </button>
+          </div>
+
+          <div className="section-head compact section-head-stack">
             <div className="inline-fields">
               <label className="number-field compact-field">
-                <span>Pot</span>
+                <span>{potInputMode === 'client' ? 'Пот в клиенте' : 'Пот до ставки'}</span>
                 <input
                   min={1}
                   onChange={(event) =>
-                    setIgorPot(sanitizeNumber(Number(event.target.value), igorPot, 1, 100000))
+                    setIgorPot(
+                      sanitizeNumber(
+                        Number(event.target.value),
+                        igorPot,
+                        potInputMode === 'client' ? igorBet + 1 : 1,
+                        100000,
+                      ),
+                    )
                   }
                   step={1}
                   type="number"
@@ -602,9 +684,7 @@ function IgorMode() {
                 <span>Bet</span>
                 <input
                   min={1}
-                  onChange={(event) =>
-                    setIgorBet(sanitizeNumber(Number(event.target.value), igorBet, 1, 100000))
-                  }
+                  onChange={(event) => handleIgorBetChange(Number(event.target.value))}
                   step={1}
                   type="number"
                   value={igorBet}
@@ -612,6 +692,23 @@ function IgorMode() {
               </label>
             </div>
           </div>
+
+          <p className="input-hint">
+            {potInputMode === 'client' ? (
+              <>
+                Если в руме ты видишь <strong>{formatDecimal(inventory.safePotInput)}</strong>{' '}
+                и bet <strong>{formatDecimal(inventory.safeBet)}</strong>, калькулятор
+                считает это как <strong>{formatDecimal(inventory.safePot)}</strong> до
+                ставки + <strong>{formatDecimal(inventory.safeBet)}</strong> bet.
+              </>
+            ) : (
+              <>
+                Классический ввод: сначала чистый пот до ставки, потом размер bet.
+                При желании это же spot можно ввести как{' '}
+                <strong>{formatDecimal(inventory.clientPot)}</strong> в режиме клиента.
+              </>
+            )}
+          </p>
 
           <div className="inventory-switch" role="group" aria-label="Known inventory mode">
             <button
@@ -702,8 +799,16 @@ function IgorMode() {
           </div>
 
           <p className="igor-summary">
-            При pot <strong>{formatDecimal(inventory.safePot)}</strong> и bet{' '}
-            <strong>{formatDecimal(inventory.safeBet)}</strong>:{' '}
+            При чистом pot <strong>{formatDecimal(inventory.safePot)}</strong> и bet{' '}
+            <strong>{formatDecimal(inventory.safeBet)}</strong>
+            {potInputMode === 'client' ? (
+              <>
+                {' '}
+                (в клиенте это выглядело бы как{' '}
+                <strong>{formatDecimal(inventory.safePotInput)}</strong>)
+              </>
+            ) : null}
+            :{' '}
             <strong>{formatDecimal(inventory.valueCount)} value</strong> дают{' '}
             <strong>{formatDecimal(inventory.bluffCount)} bluff</strong>. Это
             соответствует <strong>{formatPercent(inventory.bluffShareTotal)}</strong>{' '}
