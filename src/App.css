@@ -12,7 +12,7 @@
   display: inline-grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  width: min(100%, 520px);
+  width: min(100%, 560px);
   padding: 8px;
   margin-bottom: 18px;
   border-radius: 24px;
@@ -72,8 +72,9 @@
 }
 
 .hero-panel {
-  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.92fr);
+  grid-template-columns: minmax(0, 1.32fr) minmax(320px, 0.94fr);
   align-items: stretch;
+  gap: 28px;
   padding: clamp(22px, 3vw, 34px);
   border-radius: 32px;
   margin-bottom: 24px;
@@ -98,13 +99,14 @@
 }
 
 .hero-copy h1 {
-  font-size: clamp(2.7rem, 4.9vw, 4.45rem);
-  line-height: 0.94;
-  max-width: 10.5ch;
+  font-size: clamp(2.45rem, 4.5vw, 4.1rem);
+  line-height: 0.96;
+  max-width: 11.2ch;
 }
 
 .igor-hero .hero-copy h1 {
-  max-width: 9.5ch;
+  max-width: 11.4ch;
+  font-size: clamp(2.35rem, 4vw, 3.8rem);
 }
 
 .eyebrow,
@@ -138,10 +140,10 @@
 }
 
 .hero-text {
-  max-width: 60ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.64;
+  font-size: 0.98rem;
+  line-height: 1.62;
 }
 
 .hero-text span,
@@ -198,7 +200,7 @@
 .hero-focus {
   display: grid;
   align-content: start;
-  gap: 16px;
+  gap: 14px;
   padding: 22px;
   background:
     linear-gradient(160deg, rgba(16, 62, 52, 0.95), rgba(13, 46, 39, 0.92)),
@@ -368,7 +370,7 @@
 .section-head h2,
 .lesson-card h2 {
   font-size: clamp(1.6rem, 2.9vw, 2.35rem);
-  line-height: 1.06;
+  line-height: 1.04;
 }
 
 .number-field {
@@ -539,7 +541,7 @@
 .result-card {
   padding: 24px;
   animation: rise-in 0.75s ease both;
-  min-height: 186px;
+  min-height: 172px;
 }
 
 .result-card.primary {
@@ -606,7 +608,7 @@
 }
 
 .table-note {
-  max-width: 38ch;
+  max-width: 42ch;
   margin: 0;
   text-transform: none;
   letter-spacing: 0;
@@ -858,7 +860,6 @@ tbody tr:hover td {
   .content-grid,
   .lesson-grid,
   .igor-tool-grid,
-  .preset-grid,
   .summary-grid {
     grid-template-columns: 1fr;
   }
@@ -902,11 +903,11 @@ tbody tr:hover td {
   .section-head h2,
   .lesson-card h2 {
     max-width: none;
-    font-size: clamp(1.95rem, 8.6vw, 3rem);
+    font-size: clamp(1.85rem, 7.9vw, 2.8rem);
   }
 
   .hero-copy {
-    gap: 12px;
+    gap: 10px;
   }
 
   .hero-text,
@@ -920,33 +921,56 @@ tbody tr:hover td {
 
   .hero-chip {
     width: fit-content;
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     padding: 9px 12px;
   }
 
   .hero-focus {
-    padding: 18px;
+    gap: 12px;
+    padding: 16px;
   }
 
   .focus-size {
-    font-size: clamp(2.15rem, 9vw, 3.15rem);
+    font-size: clamp(2rem, 8.2vw, 3rem);
   }
 
   .result-card {
     min-height: auto;
-    padding: 20px;
+    padding: 18px;
   }
 
   .toggle,
-  .formula-strip,
   .inventory-switch,
   .mode-switch,
-  .pot-mode-switch {
+  .pot-mode-switch,
+  .preset-grid,
+  .summary-grid,
+  .igor-output-grid,
+  .igor-raw-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .formula-strip {
     grid-template-columns: 1fr;
   }
 
   .focus-metrics {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .focus-equation p,
+  .focus-metrics span {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+  }
+
+  .focus-metrics div {
+    padding: 10px;
+  }
+
+  .focus-metrics strong {
+    font-size: 0.96rem;
   }
 
   .inline-fields {
@@ -957,11 +981,6 @@ tbody tr:hover td {
   .compact-field {
     min-width: 0;
     width: 100%;
-  }
-
-  .igor-output-grid,
-  .igor-raw-grid {
-    grid-template-columns: 1fr;
   }
 
   .igor-converter-grid,
@@ -977,5 +996,19 @@ tbody tr:hover td {
   th,
   td {
     padding: 13px 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .toggle,
+  .inventory-switch,
+  .mode-switch,
+  .pot-mode-switch,
+  .preset-grid,
+  .summary-grid,
+  .igor-output-grid,
+  .igor-raw-grid,
+  .focus-metrics {
+    grid-template-columns: 1fr;
   }
 }
