@@ -90,7 +90,7 @@ function formatPercent(value: number) {
 }
 
 function formatPotUnits(value: number) {
-  return `${decimalFormatter.format(value)}P`
+  return `${decimalFormatter.format(value)} банка`
 }
 
 function formatDecimal(value: number) {
@@ -111,20 +111,20 @@ function formatSheetRoundedPercent(value: number) {
 
 function formatBetLabel(value: number, mode: DisplayMode) {
   if (mode === 'percent') {
-    return `${percentFormatter.format(value * 100)}% pot`
+    return `${percentFormatter.format(value * 100)}% банка`
   }
 
   const fraction = approximateFraction(value)
 
   if (fraction.denominator === 1) {
     if (fraction.numerator === 1) {
-      return '1 pot'
+      return '1 банк'
     }
 
-    return `${fraction.numerator}x pot`
+    return `${fraction.numerator} банка`
   }
 
-  return `${fraction.numerator}/${fraction.denominator} pot`
+  return `${fraction.numerator}/${fraction.denominator} банка`
 }
 
 function formatRatio(left: number, right: number) {
@@ -200,8 +200,10 @@ function calculateRaiseMetrics(potBefore: number, villainBet: number, heroRaiseT
   const safeVillainBet = Math.max(0.01, villainBet)
   const safeRaiseTotal = Math.max(safeVillainBet, heroRaiseTotal)
   const callAmount = Math.max(0, safeRaiseTotal - safeVillainBet)
+  const immediateWin = safePotBefore + safeVillainBet
+  const finalPotIfCall = safePotBefore + safeRaiseTotal + safeRaiseTotal
   const feNeeded = safeRaiseTotal / (safePotBefore + safeVillainBet + safeRaiseTotal)
-  const callerEqRequired = callAmount / (safePotBefore + safeRaiseTotal + safeRaiseTotal)
+  const callerEqRequired = callAmount / finalPotIfCall
 
   return {
     safePotBefore,
@@ -210,6 +212,29 @@ function calculateRaiseMetrics(potBefore: number, villainBet: number, heroRaiseT
     callAmount,
     feNeeded,
     callerEqRequired,
+    immediateWin,
+    finalPotIfCall,
+  }
+}
+
+function calculateBluffWithEquity(pot: number, bet: number, equityPercent: number) {
+  const safePot = Math.max(0.01, pot)
+  const safeBet = Math.max(0.01, bet)
+  const safeEquity = clamp(equityPercent / 100, 0, 1)
+  const calledEv = safeEquity * (safePot + safeBet + safeBet) - safeBet
+  const pureFe = safeBet / (safePot + safeBet)
+  const feWithEquityRaw = calledEv >= 0 ? 0 : -calledEv / (safePot - calledEv)
+  const feWithEquity = clamp(feWithEquityRaw, 0, 1)
+  const savedFe = Math.max(0, pureFe - feWithEquity)
+  const noFoldEquity = safeBet / (safePot + safeBet + safeBet)
+
+  return {
+    safeEquity,
+    calledEv,
+    pureFe,
+    feWithEquity,
+    savedFe,
+    noFoldEquity,
   }
 }
 
@@ -231,18 +256,18 @@ function QuickMode({
     <>
       <header className="hero-panel surface">
         <div className="hero-copy">
-          <p className="eyebrow">Poker Math / Fold Equity Compass</p>
-          <h1>Ставка, FE и value/bluff без путаницы и лишнего шума.</h1>
+          <p className="eyebrow">Быстрый калькулятор</p>
+          <h1>Сколько фолдов нужно ставке и какой колл ты оставляешь оппоненту.</h1>
           <p className="hero-text">
-            Введи размер ставки и сразу увидишь три разные вещи, которые часто
-            смешивают: сколько нужно <span>fold equity</span> для нулевого
-            блефа, какие <span>odds</span> ты даешь на колл и каким должен быть
-            <span> value : bluff</span> баланс на ривере.
+            Введи сайзинг и сразу увидишь три разные цифры, которые часто
+            смешивают: <span>сколько фолдов нужно</span> чистому блефу, какой
+            <span> колл по шансам</span> ты даешь и сколько <span>value на 1 bluff</span>{' '}
+            можно держать на ривере.
           </p>
           <div className="hero-tags">
             <span>Риск / (риск + награда)</span>
-            <span>Odds = value : bluff</span>
-            <span>FE не равно bluff share</span>
+            <span>Одна дробь для колла и value:bluff</span>
+            <span>Фолды нужны не равны доле блефов</span>
           </div>
         </div>
 
@@ -270,22 +295,22 @@ function QuickMode({
           <p className="focus-size">{formatBetLabel(betMultiple, displayMode)}</p>
           <p className="focus-subtitle">
             Ты рискуешь <strong>{formatPotUnits(betMultiple)}</strong>, чтобы
-            выиграть <strong>1P</strong>.
+            забрать <strong>1 банк</strong>.
           </p>
           <div className="focus-equation">
-            <span>Быстрая память</span>
+            <span>Мнемоника</span>
             <strong>
-              risk {metrics.betFraction.numerator}, reward{' '}
+              риск {metrics.betFraction.numerator}, награда{' '}
               {metrics.betFraction.denominator}
             </strong>
           </div>
           <div className="focus-metrics">
             <div>
-              <span>0 EV FE</span>
+              <span>Фолдов нужно</span>
               <strong>{formatPercent(metrics.breakEvenFe)}</strong>
             </div>
             <div>
-              <span>Value : Bluff</span>
+              <span>Value на 1 bluff</span>
               <strong>
                 {formatRatio(
                   metrics.valueToBluff.numerator,
@@ -294,7 +319,7 @@ function QuickMode({
               </strong>
             </div>
             <div>
-              <span>MDF</span>
+              <span>Защита MDF</span>
               <strong>{formatPercent(metrics.mdf)}</strong>
             </div>
           </div>
@@ -306,10 +331,10 @@ function QuickMode({
           <div className="section-head">
             <div>
               <p className="kicker">Калькулятор</p>
-              <h2>Выбери размер ставки</h2>
+              <h2>Размер ставки</h2>
             </div>
             <label className="number-field">
-              <span>% pot</span>
+              <span>Ставка, % банка</span>
               <input
                 aria-label="Bet size percent"
                 max={300}
@@ -356,7 +381,7 @@ function QuickMode({
                   type="button"
                 >
                   <span>{formatBetLabel(size, displayMode)}</span>
-                  <small>{formatPercent(calculateMetrics(size).breakEvenFe)} FE</small>
+                  <small>{formatPercent(calculateMetrics(size).breakEvenFe)} фолдов нужно</small>
                 </button>
               )
             })}
@@ -364,11 +389,11 @@ function QuickMode({
 
           <div className="formula-strip">
             <div>
-              <p className="strip-label">Главная формула</p>
-              <p className="strip-value">FE = Bet / (Pot + Bet)</p>
+              <p className="strip-label">Формула чистого блефа</p>
+              <p className="strip-value">FE = Ставка / (Банк + Ставка)</p>
             </div>
             <div>
-              <p className="strip-label">В нормализованном виде</p>
+              <p className="strip-label">Если банк принять за 1</p>
               <p className="strip-value">FE = B / (1 + B)</p>
             </div>
           </div>
@@ -376,16 +401,17 @@ function QuickMode({
 
         <section className="summary-grid">
           <article className="result-card primary">
-            <p className="card-label">Нужно для 0 EV bluff</p>
+            <p className="card-label">Фолдов нужно для нуля</p>
             <h3>{formatPercent(metrics.breakEvenFe)}</h3>
             <p>
-              Или в голове: <strong>{metrics.feFraction.numerator}</strong> из{' '}
-              <strong>{metrics.feFraction.denominator}</strong> раз.
+              Мнемоника: ставка должна проходить{' '}
+              <strong>{metrics.feFraction.numerator}</strong> раз из{' '}
+              <strong>{metrics.feFraction.denominator}</strong>.
             </p>
           </article>
 
           <article className="result-card">
-            <p className="card-label">Pot odds для колла</p>
+            <p className="card-label">Шансы банка на колл</p>
             <h3>
               {formatRatio(
                 metrics.valueToBluff.numerator,
@@ -393,41 +419,40 @@ function QuickMode({
               )}
             </h3>
             <p>
-              Оппонент вкладывает 1 часть колла, чтобы бороться за{' '}
-              {metrics.valueToBluff.numerator} части банка.
+              Оппонент платит <strong>1</strong>, чтобы бороться за{' '}
+              <strong>{metrics.valueToBluff.numerator}</strong> части банка.
             </p>
           </article>
 
           <article className="result-card">
-            <p className="card-label">Равновесный Value : Bluff</p>
+            <p className="card-label">Сколько value на 1 bluff</p>
             <h3>
               {formatRatio(
                 metrics.valueToBluff.numerator,
                 metrics.valueToBluff.denominator,
               )}
             </h3>
-            <p>Та же дробь, что и у pot odds. Value и bluff читаются одной меркой.</p>
+            <p>Та же дробь, что и у шансов банка. Запоминай один ratio вместо двух.</p>
           </article>
 
           <article className="result-card">
-            <p className="card-label">Bluff share в betting range</p>
+            <p className="card-label">Блефов в ставке</p>
             <h3>{formatPercent(metrics.bluffShare)}</h3>
-            <p>Доля блефов внутри betting range. Это не FE.</p>
+            <p>Это доля блефов внутри твоей ставки на ривере. Это не фолды, которые нужны.</p>
           </article>
         </section>
       </main>
 
       <section className="lesson-grid">
         <article className="surface lesson-card warning-card">
-          <p className="kicker">Не путай цифры</p>
+          <p className="kicker">Не смешивай цифры</p>
           <h2>
-            {formatBetLabel(betMultiple, displayMode)} выглядит просто, но в нем
-            живут две разные математики.
+            Один и тот же сайзинг одновременно говорит про фолды, колл и баланс.
           </h2>
           <div className="warning-points">
             <p>
-              <strong>{formatPercent(metrics.breakEvenFe)}</strong> FE нужно
-              чистому блефу, чтобы не терять деньги прямо сейчас.
+              <strong>{formatPercent(metrics.breakEvenFe)}</strong> нужно, чтобы
+              чистый блеф не терял деньги.
             </p>
             <p>
               <strong>
@@ -436,7 +461,7 @@ function QuickMode({
                   metrics.valueToBluff.denominator,
                 )}
               </strong>{' '}
-              одновременно читается как call odds и как ratio
+              читается и как шансы банка на колл, и как
               <span> value : bluff</span>.
             </p>
           </div>
@@ -444,23 +469,23 @@ function QuickMode({
 
         <article className="surface lesson-card">
           <p className="kicker">Мнемоника</p>
-          <h2>Нормализуй банк до 1 и считай через риск к награде.</h2>
+          <h2>Приведи банк к 1 и считай через «риск за награду».</h2>
           <ul className="memory-list">
             <li>
-              <strong>1/2 pot</strong>: риск 1, выигрыш 2, значит{' '}
-              <strong>1 / 3 FE</strong>
+              <strong>1/2 банка</strong>: риск 1, выигрыш 2, значит нужно{' '}
+              <strong>1 / 3 фолдов</strong>.
             </li>
             <li>
-              <strong>1 pot</strong>: риск 1, выигрыш 1, значит{' '}
-              <strong>1 / 2 FE</strong>
+              <strong>1 банк</strong>: риск 1, выигрыш 1, значит нужно{' '}
+              <strong>1 / 2 фолдов</strong>.
             </li>
             <li>
-              <strong>2x pot</strong>: риск 2, выигрыш 1, значит{' '}
-              <strong>2 / 3 FE</strong>
+              <strong>2 банка</strong>: риск 2, выигрыш 1, значит нужно{' '}
+              <strong>2 / 3 фолдов</strong>.
             </li>
             <li>
               <strong>Запоминай одной дробью</strong>:
-              <span> 3:1, 2:1, 3:2 одновременно и pot odds, и value:bluff.</span>
+              <span> 3:1, 2:1, 3:2 одновременно и для колла, и для value:bluff.</span>
             </li>
           </ul>
         </article>
@@ -470,11 +495,11 @@ function QuickMode({
         <div className="section-head compact">
           <div>
             <p className="kicker">Шпаргалка</p>
-            <h2>Популярные сайзинги</h2>
+            <h2>Популярные сайзинги без калькулятора</h2>
           </div>
           <p className="table-note">
-            Для ривера и любых spot-ов, где нужно быстро оценить 0 EV bluff,
-            value:bluff и защиту против ставки.
+            Быстрая память для ривера: сколько фолдов нужно, какой колл ты даешь
+            и сколько блефов можно держать.
           </p>
         </div>
 
@@ -482,10 +507,10 @@ function QuickMode({
           <table>
             <thead>
               <tr>
-                <th>Bet size</th>
-                <th>0 EV FE</th>
+                <th>Ставка</th>
+                <th>Фолдов нужно</th>
                 <th>Value : Bluff</th>
-                <th>Bluff share</th>
+                <th>Блефов в ставке</th>
                 <th>MDF</th>
               </tr>
             </thead>
@@ -516,10 +541,10 @@ function QuickMode({
         <p className="footnote">
           Сейчас выбрано <strong>{formatBetLabel(betMultiple, displayMode)}</strong>:
           <strong>
-            {metrics.valueToBluff.numerator} value /{' '}
-            {metrics.valueToBluff.denominator} bluff
+            {' '}
+            {metrics.valueToBluff.numerator} value / {metrics.valueToBluff.denominator} bluff
           </strong>{' '}
-          в betting range, а оппонент защищает примерно{' '}
+          на ривере, а защищать против такого сайзинга нужно примерно{' '}
           <strong>{formatPercent(metrics.mdf)}</strong> диапазона.
         </p>
       </section>
@@ -533,6 +558,7 @@ function IgorMode() {
   const [igorPot, setIgorPot] = useState(24)
   const [igorBet, setIgorBet] = useState(19)
   const [knownCount, setKnownCount] = useState(88)
+  const [bluffEquity, setBluffEquity] = useState(25)
   const [raisePot, setRaisePot] = useState(8)
   const [raiseBet, setRaiseBet] = useState(5)
   const [raiseTotal, setRaiseTotal] = useState(23)
@@ -545,6 +571,11 @@ function IgorMode() {
     knownCount,
   )
   const raiseMetrics = calculateRaiseMetrics(raisePot, raiseBet, raiseTotal)
+  const bluffWithEquity = calculateBluffWithEquity(
+    inventory.safePot,
+    inventory.safeBet,
+    bluffEquity,
+  )
 
   function switchPotInputMode(nextMode: PotInputMode) {
     if (nextMode === potInputMode) {
@@ -574,26 +605,25 @@ function IgorMode() {
     <>
       <header className="hero-panel surface igor-hero">
         <div className="hero-copy">
-          <p className="eyebrow">Режим Игоря</p>
-          <h1>Вся sheet-логика в одной вкладке: таблица, конвертер и заметки.</h1>
+          <p className="eyebrow">Таблица Игоря</p>
+          <h1>Лестница сайзингов, конвертер value/bluff и споты против коллбота.</h1>
           <p className="hero-text">
-            Здесь я перенес дух таблички: ladder для банка <span>100</span>,
-            режим “я знаю число <span>велью</span>” или “я знаю число{' '}
-            <span>блефов</span>”, режим <span>покерного клиента</span>,
-            отдельный блок для <span>рейзов</span> и raw заметки из нижней
-            части листа.
+            Здесь все сведено в живой формат: ladder для банка <span>100</span>,
+            перевод из <span>value в bluff</span>, режим <span>как в клиенте</span>,
+            блок рейзов против <span>коллбота</span> и расчет блефа, у которого
+            есть <span>equity</span>.
           </p>
           <div className="hero-tags">
-            <span>Pot = 100 ladder</span>
-            <span>Value / Bluff converter</span>
+            <span>Банк 100</span>
+            <span>Value ↔ Bluff</span>
             <span>Пот как в клиенте</span>
-            <span>Raise FE / Call EQ</span>
+            <span>Коллбот и блеф с эквити</span>
           </div>
         </div>
 
         <div className="hero-focus igor-focus">
           <p className="focus-label">
-            {potInputMode === 'client' ? 'Режим покерного клиента' : 'Текущий пример из листа'}
+            {potInputMode === 'client' ? 'Спот в формате клиента' : 'Текущий спот'}
           </p>
           <p className="focus-size">
             {formatDecimal(
@@ -604,29 +634,29 @@ function IgorMode() {
           <p className="focus-subtitle">
             {potInputMode === 'client' ? (
               <>
-                Клиент показывает pot <strong>{formatDecimal(inventory.safePotInput)}</strong>.
+                Клиент показывает банк <strong>{formatDecimal(inventory.safePotInput)}</strong>.
                 Для математики это <strong>{formatDecimal(inventory.safePot)}</strong> до
-                ставки и bet <strong>{formatDecimal(inventory.safeBet)}</strong>.
+                ставки и ставка <strong>{formatDecimal(inventory.safeBet)}</strong>.
               </>
             ) : (
               <>
-                Pot <strong>{formatDecimal(inventory.safePot)}</strong>, bet{' '}
-                <strong>{formatDecimal(inventory.safeBet)}</strong>, odds{' '}
+                Банк <strong>{formatDecimal(inventory.safePot)}</strong>, ставка{' '}
+                <strong>{formatDecimal(inventory.safeBet)}</strong>, колл по шансам{' '}
                 <strong>{formatPercent(inventory.oddsPercent)}</strong>.
               </>
             )}
           </p>
           <div className="focus-metrics">
             <div>
-              <span>B/V max</span>
+              <span>Блефов на 1 value</span>
               <strong>{formatDecimal(inventory.bluffPerValue)}</strong>
             </div>
             <div>
-              <span>Bluff share</span>
+              <span>Блефов в ставке</span>
               <strong>{formatPercent(inventory.bluffShareTotal)}</strong>
             </div>
             <div>
-              <span>Bet, % pot</span>
+              <span>Сайзинг</span>
               <strong>{formatPercent(inventory.betPercentOfPot)}</strong>
             </div>
           </div>
@@ -638,7 +668,7 @@ function IgorMode() {
           <div className="section-head">
             <div>
               <p className="kicker">Конвертер</p>
-              <h2>Я знаю число велью или блефов</h2>
+              <h2>Знаю value или bluff — хочу вторую сторону диапазона</h2>
             </div>
           </div>
 
@@ -648,7 +678,7 @@ function IgorMode() {
               onClick={() => switchPotInputMode('clean')}
               type="button"
             >
-              Чистый пот
+              Чистый банк
             </button>
             <button
               className={potInputMode === 'client' ? 'mode-chip active' : 'mode-chip'}
@@ -662,15 +692,15 @@ function IgorMode() {
           <div className="section-head compact section-head-stack">
             <div className="inline-fields">
               <label className="number-field compact-field">
-                <span>{potInputMode === 'client' ? 'Пот в клиенте' : 'Пот до ставки'}</span>
+                <span>{potInputMode === 'client' ? 'Банк в клиенте' : 'Банк до ставки'}</span>
                 <input
-                  min={1}
+                  min={0}
                   onChange={(event) =>
                     setIgorPot(
                       sanitizeNumber(
                         Number(event.target.value),
                         igorPot,
-                        potInputMode === 'client' ? igorBet + 1 : 1,
+                        0.01,
                         100000,
                       ),
                     )
@@ -681,7 +711,7 @@ function IgorMode() {
                 />
               </label>
               <label className="number-field compact-field">
-                <span>Bet</span>
+                <span>Ставка</span>
                 <input
                   min={1}
                   onChange={(event) => handleIgorBetChange(Number(event.target.value))}
@@ -696,15 +726,15 @@ function IgorMode() {
           <p className="input-hint">
             {potInputMode === 'client' ? (
               <>
-                Если в руме ты видишь <strong>{formatDecimal(inventory.safePotInput)}</strong>{' '}
-                и bet <strong>{formatDecimal(inventory.safeBet)}</strong>, калькулятор
-                считает это как <strong>{formatDecimal(inventory.safePot)}</strong> до
-                ставки + <strong>{formatDecimal(inventory.safeBet)}</strong> bet.
+                Если в руме ты видишь банк <strong>{formatDecimal(inventory.safePotInput)}</strong>{' '}
+                и ставку <strong>{formatDecimal(inventory.safeBet)}</strong>, калькулятор
+                переводит это в <strong>{formatDecimal(inventory.safePot)}</strong> до
+                ставки + <strong>{formatDecimal(inventory.safeBet)}</strong> ставки.
               </>
             ) : (
               <>
-                Классический ввод: сначала чистый пот до ставки, потом размер bet.
-                При желании это же spot можно ввести как{' '}
+                Классический ввод: сначала чистый банк до ставки, потом размер ставки.
+                Тот же самый спот можно ввести как{' '}
                 <strong>{formatDecimal(inventory.clientPot)}</strong> в режиме клиента.
               </>
             )}
@@ -762,7 +792,7 @@ function IgorMode() {
 
           <div className="igor-converter-grid">
             <label className="number-field">
-              <span>{knownMode === 'value' ? 'Value count' : 'Bluff count'}</span>
+              <span>{knownMode === 'value' ? 'Сколько value' : 'Сколько bluff'}</span>
               <input
                 min={0}
                 onChange={(event) =>
@@ -776,19 +806,19 @@ function IgorMode() {
 
             <div className="igor-output-grid">
               <article className="sheet-card">
-                <span>Odds</span>
+                <span>Колл по шансам</span>
                 <strong>{formatPercent(inventory.oddsPercent)}</strong>
               </article>
               <article className="sheet-card">
-                <span>B/V</span>
+                <span>Блефов на 1 value</span>
                 <strong>{formatDecimal(inventory.bluffPerValue)}</strong>
               </article>
               <article className="sheet-card">
-                <span>Bluff share</span>
+                <span>Блефов в ставке</span>
                 <strong>{formatPercent(inventory.bluffShareTotal)}</strong>
               </article>
               <article className="sheet-card">
-                <span>{knownMode === 'value' ? 'Bluffs max' : 'Value needed'}</span>
+                <span>{knownMode === 'value' ? 'Можно добавить bluff' : 'Нужно value'}</span>
                 <strong>
                   {formatDecimal(
                     knownMode === 'value' ? inventory.bluffCount : inventory.valueCount,
@@ -799,7 +829,8 @@ function IgorMode() {
           </div>
 
           <p className="igor-summary">
-            При чистом pot <strong>{formatDecimal(inventory.safePot)}</strong> и bet{' '}
+            Мнемоника: сначала считай <strong>ставка / (банк + ставка)</strong>. При
+            банке <strong>{formatDecimal(inventory.safePot)}</strong> и ставке{' '}
             <strong>{formatDecimal(inventory.safeBet)}</strong>
             {potInputMode === 'client' ? (
               <>
@@ -810,9 +841,9 @@ function IgorMode() {
             ) : null}
             :{' '}
             <strong>{formatDecimal(inventory.valueCount)} value</strong> дают{' '}
-            <strong>{formatDecimal(inventory.bluffCount)} bluff</strong>. Это
-            соответствует <strong>{formatPercent(inventory.bluffShareTotal)}</strong>{' '}
-            блефов в общем betting range.
+            <strong>{formatDecimal(inventory.bluffCount)} bluff</strong>. Вся
+            ставка при этом содержит <strong>{formatPercent(inventory.bluffShareTotal)}</strong>{' '}
+            блефов.
           </p>
         </section>
 
@@ -820,11 +851,11 @@ function IgorMode() {
           <div className="section-head compact">
             <div>
               <p className="kicker">Лестница</p>
-              <h2>Pot = 100, bet ladder из листа</h2>
+              <h2>Банк 100: готовая лестница сайзингов</h2>
             </div>
             <p className="table-note">
-              Верхняя таблица перенесена в живом виде: bet, % блефов, FE, MDF,
-              max bluff/value и минимум фолдов на один колл.
+              Та же верхняя табличка, только в понятных колонках: сколько фолдов
+              нужно, сколько bluff на 1 value и сколько защиты требуется.
             </p>
           </div>
 
@@ -832,13 +863,13 @@ function IgorMode() {
             <table>
               <thead>
                 <tr>
-                  <th>Bet</th>
-                  <th>% ?</th>
-                  <th>F?</th>
+                  <th>Ставка</th>
+                  <th>Блефов, %</th>
+                  <th>Фолдов нужно</th>
                   <th>MDF</th>
-                  <th>B/V max</th>
-                  <th>1 B - X Value</th>
-                  <th>1 call - X folds</th>
+                  <th>Bluff / Value</th>
+                  <th>Value на 1 bluff</th>
+                  <th>1 колл = фолдов</th>
                 </tr>
               </thead>
               <tbody>
@@ -872,14 +903,14 @@ function IgorMode() {
         <section className="surface igor-raises">
           <div className="section-head">
             <div>
-              <p className="kicker">Для рейзов</p>
-              <h2>Fold equity и equity на колл против рейза</h2>
+              <p className="kicker">Против коллбота</p>
+              <h2>Сколько фолдов нужен рейзу и насколько сладкий колл ты оставляешь</h2>
             </div>
           </div>
 
           <div className="inline-fields">
             <label className="number-field compact-field">
-              <span>Pot before bets</span>
+              <span>Банк до ставки</span>
               <input
                 min={0}
                 onChange={(event) =>
@@ -891,7 +922,7 @@ function IgorMode() {
               />
             </label>
             <label className="number-field compact-field">
-              <span>V bets</span>
+              <span>Ставка оппа</span>
               <input
                 min={0}
                 onChange={(event) =>
@@ -903,13 +934,11 @@ function IgorMode() {
               />
             </label>
             <label className="number-field compact-field">
-              <span>H raises total</span>
+              <span>Наш рейз total</span>
               <input
                 min={0}
                 onChange={(event) =>
-                  setRaiseTotal(
-                    sanitizeNumber(Number(event.target.value), raiseTotal, raiseBet, 100000),
-                  )
+                  setRaiseTotal(sanitizeNumber(Number(event.target.value), raiseTotal, 0.01, 100000))
                 }
                 step={1}
                 type="number"
@@ -918,71 +947,97 @@ function IgorMode() {
             </label>
           </div>
 
+          <p className="input-hint">
+            Мнемоника для коллбота: он смотрит на <strong>доплату</strong> и на{' '}
+            <strong>финальный банк</strong>. Если доплата маленькая относительно банка,
+            колл получается слишком вкусным.
+          </p>
+
           <div className="igor-output-grid raise-grid">
             <article className="sheet-card dark">
-              <span>% F ?</span>
+              <span>Фолдов нужно</span>
               <strong>{formatPercent(raiseMetrics.feNeeded)}</strong>
             </article>
             <article className="sheet-card">
-              <span>V EQ Required?</span>
-              <strong>{formatPercent(raiseMetrics.callerEqRequired)}</strong>
-            </article>
-            <article className="sheet-card">
-              <span>Call amount</span>
+              <span>Доплата на колл</span>
               <strong>{formatDecimal(raiseMetrics.callAmount)}</strong>
             </article>
             <article className="sheet-card">
-              <span>1 raise wins</span>
-              <strong>
-                {formatDecimal(raiseMetrics.safePotBefore + raiseMetrics.safeVillainBet)}
-              </strong>
+              <span>Банк после колла</span>
+              <strong>{formatDecimal(raiseMetrics.finalPotIfCall)}</strong>
+            </article>
+            <article className="sheet-card">
+              <span>Забираем сразу</span>
+              <strong>{formatDecimal(raiseMetrics.immediateWin)}</strong>
             </article>
           </div>
+
+          <p className="igor-summary">
+            Здесь коллботу надо доплатить <strong>{formatDecimal(raiseMetrics.callAmount)}</strong>{' '}
+            за банк <strong>{formatDecimal(raiseMetrics.finalPotIfCall)}</strong>, то есть ему
+            хватает примерно <strong>{formatPercent(raiseMetrics.callerEqRequired)}</strong>{' '}
+            equity на колл. Если это мало, рейз часто просто получает слишком широкий колл.
+          </p>
         </section>
 
         <section className="surface igor-notes">
           <div className="section-head compact">
             <div>
-              <p className="kicker">Черновики</p>
-              <h2>Остальные блоки из листа</h2>
+              <p className="kicker">Блеф с эквити</p>
+              <h2>Если у блефа есть ауты, фолдов нужно меньше</h2>
             </div>
             <p className="table-note">
-              Эти значения перенесены как reference-notes. Где формула не была
-              на 100% прозрачна по скрину, я оставил исходные числа, не
-              притворяясь, что полностью восстановил логику.
+              Не все блефы «мертвые». Если при колле у тебя остается equity, часть
+              работы за FE уже делает доезд.
             </p>
           </div>
 
-          <div className="igor-raw-grid">
-            <article className="raw-note">
-              <h3>EQ / EV пример</h3>
-              <p>Pot 100, bet 20, %? 14,3</p>
-              <p>F needed 16,7, F received 16,7</p>
-              <p>EV 5,83, EQ 5, F needed w EQ 10,67</p>
-            </article>
+          <div className="section-head compact section-head-stack">
+            <div className="inline-fields">
+              <label className="number-field compact-field">
+                <span>Эквити при колле, %</span>
+                <input
+                  min={0}
+                  max={100}
+                  onChange={(event) =>
+                    setBluffEquity(sanitizeNumber(Number(event.target.value), bluffEquity, 0, 100))
+                  }
+                  step={1}
+                  type="number"
+                  value={bluffEquity}
+                />
+              </label>
+            </div>
+          </div>
 
-            <article className="raw-note">
-              <h3>Для мультиставок</h3>
-              <p>Pot 100, bet 50, equity 25</p>
-              <p>NewPot 200, NewBet 75%, bet 150</p>
-              <p>EV Call -25</p>
+          <div className="igor-output-grid raise-grid">
+            <article className="sheet-card dark">
+              <span>Фолдов нужно с этой equity</span>
+              <strong>{formatPercent(bluffWithEquity.feWithEquity)}</strong>
             </article>
-
-            <article className="raw-note">
-              <h3>Проверить еще раз</h3>
-              <p>VBets 610</p>
-              <p>HRaises 3000</p>
-              <p>% ? 28,5</p>
+            <article className="sheet-card">
+              <span>Чистый блеф просил бы</span>
+              <strong>{formatPercent(bluffWithEquity.pureFe)}</strong>
             </article>
-
-            <article className="raw-note">
-              <h3>Сырой хвост листа</h3>
-              <p>1 / 2 -&gt; 0,28 / 0,72</p>
-              <p>F: 75 / 54 / 46</p>
-              <p>C: 25</p>
-              <p>150 / 75</p>
+            <article className="sheet-card">
+              <span>FE экономия</span>
+              <strong>{formatPercent(bluffWithEquity.savedFe)}</strong>
+            </article>
+            <article className="sheet-card">
+              <span>EV при колле</span>
+              <strong>{formatDecimal(bluffWithEquity.calledEv)}</strong>
             </article>
           </div>
+
+          <p className="igor-summary">
+            Для текущего спота с банком <strong>{formatDecimal(inventory.safePot)}</strong> и
+            ставкой <strong>{formatDecimal(inventory.safeBet)}</strong>:
+            при <strong>{formatPercent(bluffWithEquity.safeEquity)}</strong> equity
+            блефу нужно уже не <strong>{formatPercent(bluffWithEquity.pureFe)}</strong>, а{' '}
+            <strong>{formatPercent(bluffWithEquity.feWithEquity)}</strong> фолдов.
+            Как только equity дотягивает до <strong>{formatPercent(bluffWithEquity.noFoldEquity)}</strong>,
+            фолды вообще перестают быть обязательными.
+          </p>
         </section>
       </section>
     </>
