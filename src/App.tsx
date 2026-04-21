@@ -7,12 +7,17 @@ import type { DisplayMode } from './lib/pokerMath'
 
 type AppMode = 'quick' | 'igor' | 'advanced'
 
-const appModes: AppMode[] = ['quick', 'igor', 'advanced']
+const BASE_APP_MODES: AppMode[] = ['quick', 'igor']
 
 function App() {
   const [appMode, setAppMode] = useState<AppMode>('quick')
   const [betPercent, setBetPercent] = useState(50)
   const [displayMode, setDisplayMode] = useState<DisplayMode>('percent')
+  const [advMode, setAdvMode] = useState(false)
+
+  const visibleModes: AppMode[] = advMode
+    ? [...BASE_APP_MODES, 'advanced']
+    : BASE_APP_MODES
 
   function handleModeTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentMode: AppMode) {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
@@ -21,9 +26,19 @@ function App() {
 
     event.preventDefault()
     const direction = event.key === 'ArrowRight' ? 1 : -1
-    const currentIndex = appModes.indexOf(currentMode)
-    const nextIndex = (currentIndex + direction + appModes.length) % appModes.length
-    setAppMode(appModes[nextIndex])
+    const currentIndex = visibleModes.indexOf(currentMode)
+    const nextIndex = (currentIndex + direction + visibleModes.length) % visibleModes.length
+    setAppMode(visibleModes[nextIndex])
+  }
+
+  function toggleAdvMode() {
+    setAdvMode((prev) => {
+      const next = !prev
+      if (!next && appMode === 'advanced') {
+        setAppMode('quick')
+      }
+      return next
+    })
   }
 
   return (
@@ -56,21 +71,24 @@ function App() {
           >
             Режим Игоря
           </button>
-          <button
-            aria-controls="advanced-panel"
-            aria-selected={appMode === 'advanced'}
-            className={appMode === 'advanced' ? 'mode-switch-item active' : 'mode-switch-item'}
-            id="advanced-tab"
-            onClick={() => setAppMode('advanced')}
-            onKeyDown={(event) => handleModeTabKeyDown(event, 'advanced')}
-            role="tab"
-            tabIndex={appMode === 'advanced' ? 0 : -1}
-            type="button"
-          >
-            Адвансд мод
-          </button>
+          {advMode ? (
+            <button
+              aria-controls="advanced-panel"
+              aria-selected={appMode === 'advanced'}
+              className={appMode === 'advanced' ? 'mode-switch-item active' : 'mode-switch-item'}
+              id="advanced-tab"
+              onClick={() => setAppMode('advanced')}
+              onKeyDown={(event) => handleModeTabKeyDown(event, 'advanced')}
+              role="tab"
+              tabIndex={appMode === 'advanced' ? 0 : -1}
+              type="button"
+            >
+              Адвансд мод
+            </button>
+          ) : null}
         </div>
 
+        <div className="toolbar-right">
         <div className="global-display surface" role="group" aria-label="Global display mode">
           <span className="global-display-label">Показ</span>
           <div className="global-display-toggle">
@@ -91,6 +109,18 @@ function App() {
               Дроби
             </button>
           </div>
+        </div>
+
+        <button
+          aria-label="Advanced mode"
+          aria-pressed={advMode}
+          className={advMode ? 'adv-toggle surface active' : 'adv-toggle surface'}
+          onClick={toggleAdvMode}
+          type="button"
+        >
+          <span className="adv-toggle-label">Adv</span>
+          <span className="adv-toggle-indicator" aria-hidden="true" />
+        </button>
         </div>
       </div>
 

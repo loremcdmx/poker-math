@@ -17,6 +17,9 @@ describe('App', () => {
 
     expect(screen.getAllByText('4/5 банка').length).toBeGreaterThan(0)
 
+    expect(screen.queryByRole('tab', { name: 'Адвансд мод' })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Advanced mode' }))
     await user.click(screen.getByRole('tab', { name: 'Адвансд мод' }))
 
     expect(screen.getByText(/Доля живых/i)).toBeInTheDocument()

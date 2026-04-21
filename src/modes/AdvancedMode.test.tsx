@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { AdvancedMode } from './AdvancedMode'
@@ -15,23 +15,25 @@ describe('AdvancedMode', () => {
     await user.click(screen.getByRole('button', { name: 'TT+' }))
     expect(screen.getByText(/5 классов/)).toBeInTheDocument()
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Флоп 1' }), 'Ah')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Флоп 2' }), 'Kd')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Флоп 3' }), '7c')
+    await user.click(screen.getByRole('button', { name: 'A♥' }))
+    await user.click(screen.getByRole('button', { name: 'K♦' }))
+    await user.click(screen.getByRole('button', { name: '7♣' }))
 
     expect(screen.getByText('Made hand breakdown текущего диапазона.')).toBeInTheDocument()
   })
 
-  it('disables duplicate board cards across slots', async () => {
+  it('picks cards via the grid and tolerates re-clicks to remove them', async () => {
     const user = userEvent.setup()
 
     render(<AdvancedMode displayMode="percent" />)
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Флоп 1' }), 'Ah')
+    const aceHearts = screen.getByRole('button', { name: 'A♥' })
+    await user.click(aceHearts)
 
-    const flopTwo = screen.getByRole('combobox', { name: 'Флоп 2' })
-    const aceHeartsOption = within(flopTwo).getByRole('option', { name: 'A♥' })
+    expect(screen.getByRole('button', { name: 'A♥ выбрано' })).toBeInTheDocument()
 
-    expect(aceHeartsOption).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'A♥ выбрано' }))
+
+    expect(screen.getByRole('button', { name: 'A♥' })).toBeInTheDocument()
   })
 })

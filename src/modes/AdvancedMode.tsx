@@ -1,15 +1,16 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { HeroActionChips } from '../components/HeroActionChips'
 import { formatInteger, formatShare } from '../lib/formatters'
 import {
   analyzeRange,
-  getCardOptions,
+  cardSuits,
   getDrawLabel,
   getMadeHandLabel,
   getPresetRangeCells,
   getRangeGrid,
   rangeRanks,
   type CardCode,
+  type CardSuit,
 } from '../lib/combinatorics'
 import type { DisplayMode } from '../lib/pokerMath'
 
@@ -20,9 +21,17 @@ const suitGlyphMap = {
   s: '♠',
 } as const
 
+const suitLabelMap: Record<CardSuit, string> = {
+  s: 'Пики',
+  h: 'Червы',
+  d: 'Бубны',
+  c: 'Трефы',
+}
+
 const boardLabels = ['Флоп 1', 'Флоп 2', 'Флоп 3', 'Тёрн', 'Ривер'] as const
 const rangeGrid = getRangeGrid()
-const cardOptions = getCardOptions()
+
+type DragMode = 'add' | 'remove' | null
 
 const presetButtons = [
   { label: 'Очистить', preset: 'clear' as const },
@@ -68,33 +77,98 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
     () => new Set(getPresetRangeCells('broadways')),
   )
   const [boardCards, setBoardCards] = useState<Array<CardCode | ''>>(['', '', '', '', ''])
+  const dragModeRef = useRef<DragMode>(null)
+  const [isDragging, setIsDragging] = useState(false)
 
   const selectedCellLabels = Array.from(selectedCells)
   const analysis = analyzeRange(selectedCellLabels, boardCards)
   const boardSummary = analysis.board.length === 0 ? 'борд пока пустой' : analysis.board.map(formatCard).join(' ')
+  const boardCardSet = new Set(analysis.board)
+  const firstEmptyBoardSlot = boardCards.indexOf('')
 
-  function toggleCell(label: string) {
+  useEffect(() => {
+    if (!isDragging) {
+      return
+    }
+
+    function endDrag() {
+      dragModeRef.current = null
+      setIsDragging(false)
+    }
+
+    window.addEventListener('pointerup', endDrag)
+    window.addEventListener('pointercancel', endDrag)
+
+    return () => {
+      window.removeEventListener('pointerup', endDrag)
+      window.removeEventListener('pointercancel', endDrag)
+    }
+  }, [isDragging])
+
+  function applyCellMode(label: string, mode: Exclude<DragMode, null>) {
     setSelectedCells((currentSelection) => {
+      const alreadySelected = currentSelection.has(label)
+      if (mode === 'add' && alreadySelected) return currentSelection
+      if (mode === 'remove' && !alreadySelected) return currentSelection
+
       const nextSelection = new Set(currentSelection)
-
-      if (nextSelection.has(label)) {
-        nextSelection.delete(label)
-      } else {
+      if (mode === 'add') {
         nextSelection.add(label)
+      } else {
+        nextSelection.delete(label)
       }
-
       return nextSelection
     })
+  }
+
+  function handleCellPointerDown(event: ReactPointerEvent<HTMLButtonElement>, label: string) {
+    event.preventDefault()
+    const isSelected = selectedCells.has(label)
+    const mode: Exclude<DragMode, null> = isSelected ? 'remove' : 'add'
+    dragModeRef.current = mode
+    setIsDragging(true)
+    applyCellMode(label, mode)
+  }
+
+  function handleCellPointerEnter(label: string) {
+    const mode = dragModeRef.current
+    if (mode === null) {
+      return
+    }
+    applyCellMode(label, mode)
   }
 
   function applyPreset(preset: (typeof presetButtons)[number]['preset']) {
     setSelectedCells(new Set(getPresetRangeCells(preset)))
   }
 
-  function setBoardCard(slotIndex: number, nextValue: string) {
+  function toggleBoardCard(card: CardCode) {
     setBoardCards((currentBoard) => {
+      const existingIndex = currentBoard.indexOf(card)
+      if (existingIndex !== -1) {
+        const nextBoard = [...currentBoard]
+        nextBoard[existingIndex] = ''
+        return nextBoard
+      }
+
+      const emptyIndex = currentBoard.indexOf('')
+      if (emptyIndex === -1) {
+        return currentBoard
+      }
+
       const nextBoard = [...currentBoard]
-      nextBoard[slotIndex] = nextValue === '' ? '' : (nextValue as CardCode)
+      nextBoard[emptyIndex] = card
+      return nextBoard
+    })
+  }
+
+  function clearBoardSlot(slotIndex: number) {
+    setBoardCards((currentBoard) => {
+      if (currentBoard[slotIndex] === '') {
+        return currentBoard
+      }
+      const nextBoard = [...currentBoard]
+      nextBoard[slotIndex] = ''
       return nextBoard
     })
   }
@@ -221,7 +295,11 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
         </div>
 
         <div className="range-matrix-wrap">
-          <div className="range-matrix" role="grid" aria-label="Preflop range grid">
+          <div
+            className={isDragging ? 'range-matrix dragging' : 'range-matrix'}
+            role="grid"
+            aria-label="Preflop range grid"
+          >
             <div className="range-axis range-corner" aria-hidden="true" />
             {rangeRanks.map((rank) => (
               <div className="range-axis" key={`col-${rank}`}>
@@ -241,7 +319,14 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
                       aria-pressed={selected}
                       className={`range-cell ${cell.kind}${selected ? ' active' : ''}`}
                       key={cell.label}
-                      onClick={() => toggleCell(cell.label)}
+                      onClick={(event) => {
+                        if (event.detail !== 0) {
+                          return
+                        }
+                        applyCellMode(cell.label, selected ? 'remove' : 'add')
+                      }}
+                      onPointerDown={(event) => handleCellPointerDown(event, cell.label)}
+                      onPointerEnter={() => handleCellPointerEnter(cell.label)}
                       type="button"
                     >
                       {cell.label}
@@ -251,6 +336,9 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
               </Fragment>
             ))}
           </div>
+          <p className="range-matrix-hint">
+            Клик — один класс. Зажми и веди — выделяй/снимай диапазоны сразу.
+          </p>
         </div>
 
         <p className="footnote">
@@ -273,53 +361,84 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
             </p>
           </div>
 
-          <div className="board-control-grid">
-            {boardLabels.map((label, index) => (
-              <label className="board-field" key={label}>
-                <span>{label}</span>
-                <select
-                  aria-label={label}
-                  onChange={(event) => setBoardCard(index, event.target.value)}
-                  value={boardCards[index]}
+          <div className="board-slots" role="group" aria-label="Board slots">
+            {boardLabels.map((label, index) => {
+              const card = boardCards[index]
+              const filled = card !== ''
+              const isNext = !filled && firstEmptyBoardSlot === index
+
+              return (
+                <button
+                  aria-label={
+                    filled ? `${label}: ${formatCard(card)} — убрать` : `${label} — пусто`
+                  }
+                  className={`board-slot${filled ? ' filled' : ''}${isNext ? ' next' : ''}`}
+                  key={label}
+                  onClick={() => clearBoardSlot(index)}
+                  type="button"
                 >
-                  <option value="">—</option>
-                  {cardOptions.map((card) => {
-                    const disabled =
-                      boardCards.some((selectedCard, selectedIndex) => {
-                        if (selectedIndex === index) {
-                          return false
-                        }
-
-                        return selectedCard === card
-                      })
-
-                    return (
-                      <option disabled={disabled} key={card} value={card}>
-                        {formatCard(card)}
-                      </option>
-                    )
-                  })}
-                </select>
-              </label>
-            ))}
+                  <span className="board-slot-label">{label}</span>
+                  {filled ? (
+                    <span className={`board-slot-card ${getCardTone(card)}`}>
+                      {formatCard(card)}
+                    </span>
+                  ) : (
+                    <span className="board-slot-card empty" aria-hidden="true">
+                      —
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           <div className="combo-board-toolbar">
-            <div className="combo-board-preview" aria-live="polite">
-              {analysis.board.length === 0 ? (
-                <span className="combo-board-empty">Борд пока не задан</span>
-              ) : (
-                analysis.board.map((card) => (
-                  <span className={`combo-board-card ${getCardTone(card)}`} key={card}>
-                    {formatCard(card)}
-                  </span>
-                ))
-              )}
-            </div>
-
-            <button className="mode-chip" onClick={clearBoard} type="button">
+            <p className="combo-board-hint" aria-live="polite">
+              {analysis.board.length === 0
+                ? 'Кликай по картам ниже — первые 3 становятся флопом, 4-я тёрном, 5-я ривером.'
+                : `Выбрано ${analysis.board.length} из 5: ${analysis.board.map(formatCard).join(' ')}`}
+            </p>
+            <button
+              aria-label="Очистить борд"
+              className="mode-chip"
+              disabled={analysis.board.length === 0}
+              onClick={clearBoard}
+              type="button"
+            >
               Очистить борд
             </button>
+          </div>
+
+          <div className="card-picker" role="group" aria-label="Card picker">
+            {cardSuits.map((suit) => (
+              <div className="card-picker-row" key={suit}>
+                <span className={`card-picker-suit ${suit === 'h' || suit === 'd' ? 'red' : 'dark'}`}>
+                  {suitGlyphMap[suit]}
+                  <span className="visually-hidden">{suitLabelMap[suit]}</span>
+                </span>
+                {rangeRanks.map((rank) => {
+                  const card = `${rank}${suit}` as CardCode
+                  const selected = boardCardSet.has(card)
+                  const boardFull = analysis.board.length >= 5 && !selected
+
+                  return (
+                    <button
+                      aria-label={`${rank}${suitGlyphMap[suit]}${selected ? ' выбрано' : ''}`}
+                      aria-pressed={selected}
+                      className={`card-picker-cell ${getCardTone(card)}${selected ? ' selected' : ''}${
+                        boardFull ? ' disabled' : ''
+                      }`}
+                      disabled={boardFull}
+                      key={card}
+                      onClick={() => toggleBoardCard(card)}
+                      type="button"
+                    >
+                      {rank}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
           </div>
 
           <div className="summary-grid compact-summary">
