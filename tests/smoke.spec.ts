@@ -58,10 +58,45 @@ test('igor mode mobile layout stays narrow and hero actions are useful', async (
   await context.close()
 })
 
+test('all tabs stay scrollable and console-clean through the main flows', async ({ page }) => {
+  const consoleErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      consoleErrors.push(message.text())
+    }
+  })
+
+  await page.goto('/')
+
+  await page.mouse.wheel(0, 1600)
+  await page.mouse.wheel(0, -1600)
+
+  await page.getByRole('tab', { name: 'Режим Игоря' }).click()
+  await page.mouse.wheel(0, 1800)
+
+  await page.getByRole('button', { name: 'Advanced mode' }).click()
+  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
+  await page.getByLabel('Пароль адвансд мода').fill('123')
+  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
+  await page.mouse.wheel(0, 1800)
+  await page.getByRole('button', { name: 'Эквити' }).click()
+  await page.mouse.wheel(0, 1800)
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }))
+
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1)
+  expect(consoleErrors).toEqual([])
+})
+
 test('advanced mode exposes range grid and board analysis', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Advanced mode' }).click()
   await page.getByRole('tab', { name: 'Адвансд мод' }).click()
+  await page.getByLabel('Пароль адвансд мода').fill('123')
+  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
 
   await expect(page.getByText('Комбинаторика, блокеры и разбор диапазона по борду.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Toggle AKs' })).toBeVisible()
@@ -73,6 +108,27 @@ test('advanced mode exposes range grid and board analysis', async ({ page }) => 
   await page.getByRole('button', { name: 'K♦', exact: true }).click()
   await page.getByRole('button', { name: '7♣', exact: true }).click()
 
-  await expect(page.getByRole('heading', { name: 'Готовые руки' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Готовые руки', exact: true })).toBeVisible()
   await expect(page.locator('#advanced-panel')).toContainText('Живые комбо')
+})
+
+test('advanced equity mode calculates deterministic river equity', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Advanced mode' }).click()
+  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
+  await page.getByLabel('Пароль адвансд мода').fill('123')
+  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
+  await page.getByRole('button', { name: 'Эквити' }).click()
+
+  await page.getByRole('button', { name: 'Рука', exact: true }).nth(1).click()
+
+  await page.getByRole('combobox', { name: 'Флоп 1' }).selectOption('2c')
+  await page.getByRole('combobox', { name: 'Флоп 2' }).selectOption('3d')
+  await page.getByRole('combobox', { name: 'Флоп 3' }).selectOption('4h')
+  await page.getByRole('combobox', { name: 'Тёрн' }).selectOption('5s')
+  await page.getByRole('combobox', { name: 'Ривер' }).selectOption('7c')
+  await page.getByRole('button', { name: 'Пересчитать equity' }).click()
+
+  await expect(page.locator('#equity-results')).toContainText('100%')
+  await expect(page.locator('#equity-results')).toContainText('Точный')
 })

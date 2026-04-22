@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { HeroActionChips } from '../components/HeroActionChips'
 import { formatInteger, formatShare } from '../lib/formatters'
 import {
@@ -13,6 +13,7 @@ import {
   type CardSuit,
 } from '../lib/combinatorics'
 import type { DisplayMode } from '../lib/pokerMath'
+import { EquityMode } from './EquityMode'
 
 const suitGlyphMap = {
   c: '♣',
@@ -22,10 +23,10 @@ const suitGlyphMap = {
 } as const
 
 const suitLabelMap: Record<CardSuit, string> = {
-  s: 'Пики',
-  h: 'Червы',
-  d: 'Бубны',
   c: 'Трефы',
+  d: 'Бубны',
+  h: 'Червы',
+  s: 'Пики',
 }
 
 const boardLabels = ['Флоп 1', 'Флоп 2', 'Флоп 3', 'Тёрн', 'Ривер'] as const
@@ -46,13 +47,6 @@ const presetButtons = [
   { label: 'SC', preset: 'suited_connectors' as const },
 ] as const
 
-const advancedHeroActions = [
-  { href: '#advanced-guide', label: 'Шпаргалка' },
-  { href: '#advanced-grid', label: 'Матрица' },
-  { href: '#advanced-board', label: 'Борд' },
-  { href: '#advanced-categories', label: 'Категории' },
-]
-
 function formatCard(card: CardCode) {
   return `${card[0]}${suitGlyphMap[card[1] as keyof typeof suitGlyphMap]}`
 }
@@ -64,6 +58,7 @@ function getCardTone(card: CardCode) {
 function ComboCard({ card }: { card: CardCode }) {
   const rank = card[0]
   const suit = card[1] as keyof typeof suitGlyphMap
+
   return (
     <span className={`combo-card-chip ${getCardTone(card)}`}>
       <span className="combo-card-rank">{rank}</span>
@@ -78,6 +73,7 @@ function ComboExamples({ examples }: { examples: readonly string[] }) {
       {examples.map((combo) => {
         const firstCard = combo.slice(0, 2) as CardCode
         const secondCard = combo.slice(2, 4) as CardCode
+
         return (
           <span className="combo-pair" key={combo}>
             <ComboCard card={firstCard} />
@@ -94,6 +90,7 @@ type AdvancedModeProps = {
 }
 
 export function AdvancedMode({ displayMode }: AdvancedModeProps) {
+  const [advancedSection, setAdvancedSection] = useState<'combos' | 'equity'>('combos')
   const [selectedCells, setSelectedCells] = useState<Set<string>>(
     () => new Set(getPresetRangeCells('broadways')),
   )
@@ -101,11 +98,28 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
   const dragModeRef = useRef<DragMode>(null)
   const [isDragging, setIsDragging] = useState(false)
 
-  const selectedCellLabels = Array.from(selectedCells)
-  const analysis = analyzeRange(selectedCellLabels, boardCards)
-  const boardSummary = analysis.board.length === 0 ? 'борд пока пустой' : analysis.board.map(formatCard).join(' ')
+  const selectedCellLabels = useMemo(() => Array.from(selectedCells), [selectedCells])
+  const analysis = useMemo(
+    () => analyzeRange(selectedCellLabels, boardCards),
+    [boardCards, selectedCellLabels],
+  )
+  const boardSummary =
+    analysis.board.length === 0 ? 'борд пока пустой' : analysis.board.map(formatCard).join(' ')
   const boardCardSet = new Set(analysis.board)
   const firstEmptyBoardSlot = boardCards.indexOf('')
+  const advancedHeroActions =
+    advancedSection === 'combos'
+      ? [
+          { href: '#advanced-guide', label: 'Шпаргалка' },
+          { href: '#advanced-grid', label: 'Матрица' },
+          { href: '#advanced-board', label: 'Борд' },
+          { href: '#advanced-categories', label: 'Категории' },
+        ]
+      : [
+          { href: '#equity-inputs', label: 'Ввод' },
+          { href: '#equity-board', label: 'Борд' },
+          { href: '#equity-results', label: 'Результат' },
+        ]
 
   useEffect(() => {
     if (!isDragging) {
@@ -129,15 +143,23 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
   function applyCellMode(label: string, mode: Exclude<DragMode, null>) {
     setSelectedCells((currentSelection) => {
       const alreadySelected = currentSelection.has(label)
-      if (mode === 'add' && alreadySelected) return currentSelection
-      if (mode === 'remove' && !alreadySelected) return currentSelection
+
+      if (mode === 'add' && alreadySelected) {
+        return currentSelection
+      }
+
+      if (mode === 'remove' && !alreadySelected) {
+        return currentSelection
+      }
 
       const nextSelection = new Set(currentSelection)
+
       if (mode === 'add') {
         nextSelection.add(label)
       } else {
         nextSelection.delete(label)
       }
+
       return nextSelection
     })
   }
@@ -153,9 +175,11 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
 
   function handleCellPointerEnter(label: string) {
     const mode = dragModeRef.current
+
     if (mode === null) {
       return
     }
+
     applyCellMode(label, mode)
   }
 
@@ -166,6 +190,7 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
   function toggleBoardCard(card: CardCode) {
     setBoardCards((currentBoard) => {
       const existingIndex = currentBoard.indexOf(card)
+
       if (existingIndex !== -1) {
         const nextBoard = [...currentBoard]
         nextBoard[existingIndex] = ''
@@ -173,6 +198,7 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
       }
 
       const emptyIndex = currentBoard.indexOf('')
+
       if (emptyIndex === -1) {
         return currentBoard
       }
@@ -188,6 +214,7 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
       if (currentBoard[slotIndex] === '') {
         return currentBoard
       }
+
       const nextBoard = [...currentBoard]
       nextBoard[slotIndex] = ''
       return nextBoard
@@ -203,11 +230,15 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
       <header className="hero-panel surface advanced-hero">
         <div className="hero-copy">
           <p className="eyebrow">Адвансд мод</p>
-          <h1>Комбинаторика, блокеры и разбор диапазона по борду.</h1>
+          <h1>
+            {advancedSection === 'combos'
+              ? 'Комбинаторика, блокеры и разбор диапазона по борду.'
+              : 'Эквити, матчапы и board-aware расчёт против диапазона.'}
+          </h1>
           <p className="hero-text">
-            Это уже не про один сайзинг, а про сам диапазон: сколько в нём живых комбо,
-            какие руки доезжают на конкретном борде и как блокеры режут сырые префлопные
-            числа. Сверху опорные числа, ниже матрица и живой разбор борда.
+            {advancedSection === 'combos'
+              ? 'Здесь живёт flopzilla-подобная часть: сколько в диапазоне живых комбо, какие руки доезжают на конкретном борде и как блокеры режут сырые префлопные числа.'
+              : 'Здесь живёт stove-подобная часть: рука против руки, рука против диапазона и диапазон против диапазона с учётом блокеров, борда и showdown-equity.'}
           </p>
           <HeroActionChips
             ariaLabel="Быстрые переходы адвансд-режима"
@@ -216,350 +247,408 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
         </div>
 
         <div className="hero-focus advanced-focus">
-          <p className="focus-label">Текущий диапазон</p>
-          <p className="focus-size">
-            {formatInteger(analysis.selectedCellCount)} классов / {formatInteger(analysis.rawComboCount)} комбо
-          </p>
-          <p className="focus-subtitle">
-            На борде сейчас <strong>{boardSummary}</strong>, поэтому живыми остаются{' '}
-            <strong>{formatInteger(analysis.liveComboCount)}</strong> комбо, а{' '}
-            <strong>{formatInteger(analysis.blockedComboCount)}</strong> уже умерли от блокеров.
-          </p>
-          <div className="focus-metrics">
-            <div>
-              <span>Сырые префлоп-комбо</span>
-              <strong>{formatInteger(analysis.rawComboCount)}</strong>
-            </div>
-            <div>
-              <span>Живые комбо</span>
-              <strong>{formatInteger(analysis.liveComboCount)}</strong>
-            </div>
-            <div>
-              <span>Постфлоп-анализ</span>
-              <strong>{analysis.postflopReady ? 'включён' : 'ждёт флоп'}</strong>
-            </div>
-          </div>
+          {advancedSection === 'combos' ? (
+            <>
+              <p className="focus-label">Текущий диапазон</p>
+              <p className="focus-size">
+                {formatInteger(analysis.selectedCellCount)} классов /{' '}
+                {formatInteger(analysis.rawComboCount)} комбо
+              </p>
+              <p className="focus-subtitle">
+                На борде сейчас <strong>{boardSummary}</strong>, поэтому живыми остаются{' '}
+                <strong>{formatInteger(analysis.liveComboCount)}</strong> комбо, а{' '}
+                <strong>{formatInteger(analysis.blockedComboCount)}</strong> уже умерли от блокеров.
+              </p>
+              <div className="focus-metrics">
+                <div>
+                  <span>Сырые префлоп-комбо</span>
+                  <strong>{formatInteger(analysis.rawComboCount)}</strong>
+                </div>
+                <div>
+                  <span>Живые комбо</span>
+                  <strong>{formatInteger(analysis.liveComboCount)}</strong>
+                </div>
+                <div>
+                  <span>Постфлоп-анализ</span>
+                  <strong>{analysis.postflopReady ? 'включён' : 'ждёт флоп'}</strong>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="focus-label">Продвинутая зона</p>
+              <p className="focus-size">Flopzilla + Stove</p>
+              <p className="focus-subtitle">
+                Комбинаторика и эквити теперь собраны в одном месте. Сначала смотри на hit range
+                и блокеры, потом сразу переходи к equity на тех же руках и борде.
+              </p>
+              <div className="focus-metrics">
+                <div>
+                  <span>Комбинаторика</span>
+                  <strong>внутри</strong>
+                </div>
+                <div>
+                  <span>Эквити</span>
+                  <strong>внутри</strong>
+                </div>
+                <div>
+                  <span>Логика</span>
+                  <strong>одна зона</strong>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </header>
 
-      <section className="surface jump-target" id="advanced-guide">
-        <div className="section-head compact">
-          <div>
-            <p className="kicker">Шпаргалка</p>
-            <h2>Опорные числа префлоп-комбо</h2>
-          </div>
-          <p className="table-note">
-            Эти цифры конечны и быстро запоминаются. Идея простая: не пересчитывать с
-            нуля каждый раз, а держать в голове пару опорных шаблонов и лестницу блокеров.
-          </p>
-        </div>
-
-        <div className="combo-guide-grid">
-          <article className="result-card">
-            <p className="card-label">Непарная рука</p>
-            <h3>16 комбо</h3>
-            <p>
-              Любая непарная рука начинается с <strong>16</strong>: это{' '}
-              <strong>4 suited</strong> + <strong>12 offsuit</strong>.
-            </p>
-          </article>
-          <article className="result-card">
-            <p className="card-label">Карманка</p>
-            <h3>6 комбо</h3>
-            <p>
-              У любой пары всего <strong>6</strong> комбинаций. Потом блокеры режут её по
-              лестнице <strong>6 → 3 → 1 → 0</strong>.
-            </p>
-          </article>
-          <article className="result-card">
-            <p className="card-label">Один блокер ранга</p>
-            <h3>16 → 12</h3>
-            <p>
-              Если на борде лежит одна карта нужного ранга, семейство <strong>AK</strong>{' '}
-              теряет четверть комбо и падает с <strong>16</strong> до <strong>12</strong>.
-            </p>
-          </article>
-          <article className="result-card">
-            <p className="card-label">Блокер на оба ранга</p>
-            <h3>16 → 9</h3>
-            <p>
-              Если на борде и туз, и король, у <strong>AK</strong> живых комбо остаётся{' '}
-              <strong>9</strong> из 16.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section className="surface jump-target" id="advanced-grid">
-        <div className="section-head compact">
-          <div>
-            <p className="kicker">Матрица</p>
-            <h2>Собери диапазон классами рук и смотри на реальные комбо</h2>
-          </div>
-          <p className="table-note">
-            Диагональ это пары, верхний треугольник suited, нижний offsuit. Каждая кнопка
-            включает целый класс рук вроде <strong>AKs</strong> или <strong>99</strong>.
-          </p>
-        </div>
-
-        <div className="combo-presets" role="group" aria-label="Range presets">
-          {presetButtons.map((preset) => (
-            <button
-              className="mode-chip"
-              key={preset.label}
-              onClick={() => applyPreset(preset.preset)}
-              type="button"
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="range-matrix-wrap">
-          <div
-            className={isDragging ? 'range-matrix dragging' : 'range-matrix'}
-            role="grid"
-            aria-label="Preflop range grid"
+      <section className="surface advanced-switch-panel">
+        <div className="inventory-switch" role="group" aria-label="Advanced section mode">
+          <button
+            aria-pressed={advancedSection === 'combos'}
+            className={advancedSection === 'combos' ? 'mode-chip active' : 'mode-chip'}
+            onClick={() => setAdvancedSection('combos')}
+            type="button"
           >
-            <div className="range-axis range-corner" aria-hidden="true" />
-            {rangeRanks.map((rank) => (
-              <div className="range-axis" key={`col-${rank}`}>
-                {rank}
-              </div>
-            ))}
-
-            {rangeGrid.map((row, rowIndex) => (
-              <Fragment key={`row-${rangeRanks[rowIndex]}`}>
-                <div className="range-axis">{rangeRanks[rowIndex]}</div>
-                {row.map((cell) => {
-                  const selected = selectedCells.has(cell.label)
-
-                  return (
-                    <button
-                      aria-label={`Toggle ${cell.label}`}
-                      aria-pressed={selected}
-                      className={`range-cell ${cell.kind}${selected ? ' active' : ''}`}
-                      key={cell.label}
-                      onClick={(event) => {
-                        if (event.detail !== 0) {
-                          return
-                        }
-                        applyCellMode(cell.label, selected ? 'remove' : 'add')
-                      }}
-                      onPointerDown={(event) => handleCellPointerDown(event, cell.label)}
-                      onPointerEnter={() => handleCellPointerEnter(cell.label)}
-                      type="button"
-                    >
-                      {cell.label}
-                    </button>
-                  )
-                })}
-              </Fragment>
-            ))}
-          </div>
-          <p className="range-matrix-hint">
-            Клик — один класс. Зажми и веди — выделяй/снимай диапазоны сразу.
-          </p>
+            Комбинаторика
+          </button>
+          <button
+            aria-pressed={advancedSection === 'equity'}
+            className={advancedSection === 'equity' ? 'mode-chip active' : 'mode-chip'}
+            onClick={() => setAdvancedSection('equity')}
+            type="button"
+          >
+            Эквити
+          </button>
         </div>
-
-        <p className="footnote">
-          Сейчас выбрано <strong>{formatInteger(analysis.selectedCellCount)}</strong> классов,
-          что даёт <strong>{formatInteger(analysis.rawComboCount)}</strong> сырых префлоп-комбо
-          до учёта борда.
-        </p>
       </section>
 
-      <section className="advanced-layout">
-        <section className="surface jump-target" id="advanced-board">
-          <div className="section-head compact">
-            <div>
-              <p className="kicker">Борд</p>
-              <h2>Поставь флоп, тёрн и ривер — увидишь живые комбо</h2>
+      {advancedSection === 'equity' ? (
+        <EquityMode displayMode={displayMode} embedded />
+      ) : (
+        <>
+          <section className="surface jump-target" id="advanced-guide">
+            <div className="section-head compact">
+              <div>
+                <p className="kicker">Шпаргалка</p>
+                <h2>Опорные числа префлоп-комбо</h2>
+              </div>
+              <p className="table-note">
+                Эти цифры конечны и быстро запоминаются. Идея простая: не пересчитывать с нуля
+                каждый раз, а держать в голове пару опорных шаблонов и лестницу блокеров.
+              </p>
             </div>
-            <p className="table-note">
-              Здесь матрица перестаёт быть абстракцией: борд сразу выбивает мёртвые комбо
-              и показывает, какие готовые руки и дро остались в твоём диапазоне.
-            </p>
-          </div>
 
-          <div className="board-slots" role="group" aria-label="Board slots">
-            {boardLabels.map((label, index) => {
-              const card = boardCards[index]
-              const filled = card !== ''
-              const isNext = !filled && firstEmptyBoardSlot === index
+            <div className="combo-guide-grid">
+              <article className="result-card">
+                <p className="card-label">Непарная рука</p>
+                <h3>16 комбо</h3>
+                <p>
+                  Любая непарная рука начинается с <strong>16</strong>: это <strong>4 suited</strong>{' '}
+                  + <strong>12 offsuit</strong>.
+                </p>
+              </article>
+              <article className="result-card">
+                <p className="card-label">Карманка</p>
+                <h3>6 комбо</h3>
+                <p>
+                  У любой пары всего <strong>6</strong> комбинаций. Потом блокеры режут её по
+                  лестнице <strong>6 → 3 → 1 → 0</strong>.
+                </p>
+              </article>
+              <article className="result-card">
+                <p className="card-label">Один блокер ранга</p>
+                <h3>16 → 12</h3>
+                <p>
+                  Если на борде лежит одна карта нужного ранга, семейство <strong>AK</strong>{' '}
+                  теряет четверть комбо и падает с <strong>16</strong> до <strong>12</strong>.
+                </p>
+              </article>
+              <article className="result-card">
+                <p className="card-label">Блокер на оба ранга</p>
+                <h3>16 → 9</h3>
+                <p>
+                  Если на борде и туз, и король, у <strong>AK</strong> живых комбо остаётся{' '}
+                  <strong>9</strong> из 16.
+                </p>
+              </article>
+            </div>
+          </section>
 
-              return (
+          <section className="surface jump-target" id="advanced-grid">
+            <div className="section-head compact">
+              <div>
+                <p className="kicker">Матрица</p>
+                <h2>Собери диапазон классами рук и смотри на реальные комбо</h2>
+              </div>
+              <p className="table-note">
+                Диагональ это пары, верхний треугольник suited, нижний offsuit. Каждая кнопка
+                включает целый класс рук вроде <strong>AKs</strong> или <strong>99</strong>.
+              </p>
+            </div>
+
+            <div className="combo-presets" role="group" aria-label="Range presets">
+              {presetButtons.map((preset) => (
                 <button
-                  aria-label={
-                    filled ? `${label}: ${formatCard(card)} — убрать` : `${label} — пусто`
-                  }
-                  className={`board-slot${filled ? ' filled' : ''}${isNext ? ' next' : ''}`}
-                  key={label}
-                  onClick={() => clearBoardSlot(index)}
+                  className="mode-chip"
+                  key={preset.label}
+                  onClick={() => applyPreset(preset.preset)}
                   type="button"
                 >
-                  <span className="board-slot-label">{label}</span>
-                  {filled ? (
-                    <span className={`board-slot-card ${getCardTone(card)}`}>
-                      {formatCard(card)}
-                    </span>
-                  ) : (
-                    <span className="board-slot-card empty" aria-hidden="true">
-                      —
-                    </span>
-                  )}
+                  {preset.label}
                 </button>
-              )
-            })}
-          </div>
+              ))}
+            </div>
 
-          <div className="combo-board-toolbar">
-            <p className="combo-board-hint" aria-live="polite">
-              {analysis.board.length === 0
-                ? 'Кликай по картам ниже — первые 3 становятся флопом, 4-я тёрном, 5-я ривером.'
-                : `Выбрано ${analysis.board.length} из 5: ${analysis.board.map(formatCard).join(' ')}`}
+            <div className="range-matrix-wrap">
+              <div
+                aria-label="Preflop range grid"
+                className={isDragging ? 'range-matrix dragging' : 'range-matrix'}
+                role="grid"
+              >
+                <div className="range-axis range-corner" aria-hidden="true" />
+                {rangeRanks.map((rank) => (
+                  <div className="range-axis" key={`col-${rank}`}>
+                    {rank}
+                  </div>
+                ))}
+
+                {rangeGrid.map((row, rowIndex) => (
+                  <Fragment key={`row-${rangeRanks[rowIndex]}`}>
+                    <div className="range-axis">{rangeRanks[rowIndex]}</div>
+                    {row.map((cell) => {
+                      const selected = selectedCells.has(cell.label)
+
+                      return (
+                        <button
+                          aria-label={`Toggle ${cell.label}`}
+                          aria-pressed={selected}
+                          className={`range-cell ${cell.kind}${selected ? ' active' : ''}`}
+                          key={cell.label}
+                          onClick={(event) => {
+                            if (event.detail !== 0) {
+                              return
+                            }
+
+                            applyCellMode(cell.label, selected ? 'remove' : 'add')
+                          }}
+                          onPointerDown={(event) => handleCellPointerDown(event, cell.label)}
+                          onPointerEnter={() => handleCellPointerEnter(cell.label)}
+                          type="button"
+                        >
+                          {cell.label}
+                        </button>
+                      )
+                    })}
+                  </Fragment>
+                ))}
+              </div>
+              <p className="range-matrix-hint">
+                Клик — один класс. Зажми и веди — выделяй/снимай диапазоны сразу.
+              </p>
+            </div>
+
+            <p className="footnote">
+              Сейчас выбрано <strong>{formatInteger(analysis.selectedCellCount)}</strong> классов,
+              что даёт <strong>{formatInteger(analysis.rawComboCount)}</strong> сырых
+              префлоп-комбо до учёта борда.
             </p>
-            <button
-              aria-label="Очистить борд"
-              className="mode-chip"
-              disabled={analysis.board.length === 0}
-              onClick={clearBoard}
-              type="button"
-            >
-              Очистить борд
-            </button>
-          </div>
+          </section>
 
-          <div className="card-picker" role="group" aria-label="Card picker">
-            {cardSuits.map((suit) => (
-              <div className="card-picker-row" key={suit}>
-                <span className={`card-picker-suit ${suit === 'h' || suit === 'd' ? 'red' : 'dark'}`}>
-                  {suitGlyphMap[suit]}
-                  <span className="visually-hidden">{suitLabelMap[suit]}</span>
-                </span>
-                {rangeRanks.map((rank) => {
-                  const card = `${rank}${suit}` as CardCode
-                  const selected = boardCardSet.has(card)
-                  const boardFull = analysis.board.length >= 5 && !selected
+          <section className="advanced-layout">
+            <section className="surface jump-target" id="advanced-board">
+              <div className="section-head compact">
+                <div>
+                  <p className="kicker">Борд</p>
+                  <h2>Поставь флоп, тёрн и ривер — увидишь живые комбо</h2>
+                </div>
+                <p className="table-note">
+                  Здесь матрица перестаёт быть абстракцией: борд сразу выбивает мёртвые комбо и
+                  показывает, какие готовые руки и дро остались в твоём диапазоне.
+                </p>
+              </div>
+
+              <div className="board-slots" role="group" aria-label="Board slots">
+                {boardLabels.map((label, index) => {
+                  const card = boardCards[index]
+                  const filled = card !== ''
+                  const isNext = !filled && firstEmptyBoardSlot === index
 
                   return (
                     <button
-                      aria-label={`${rank}${suitGlyphMap[suit]}${selected ? ' выбрано' : ''}`}
-                      aria-pressed={selected}
-                      className={`card-picker-cell ${getCardTone(card)}${selected ? ' selected' : ''}${
-                        boardFull ? ' disabled' : ''
-                      }`}
-                      disabled={boardFull}
-                      key={card}
-                      onClick={() => toggleBoardCard(card)}
+                      aria-label={
+                        filled ? `${label}: ${formatCard(card)} — убрать` : `${label} — пусто`
+                      }
+                      className={`board-slot${filled ? ' filled' : ''}${isNext ? ' next' : ''}`}
+                      key={label}
+                      onClick={() => clearBoardSlot(index)}
                       type="button"
                     >
-                      {rank}
+                      <span className="board-slot-label">{label}</span>
+                      {filled ? (
+                        <span className={`board-slot-card ${getCardTone(card)}`}>
+                          {formatCard(card)}
+                        </span>
+                      ) : (
+                        <span aria-hidden="true" className="board-slot-card empty">
+                          —
+                        </span>
+                      )}
                     </button>
                   )
                 })}
               </div>
-            ))}
-          </div>
 
-          <div className="summary-grid compact-summary">
-            <article className="result-card primary">
-              <p className="card-label">Живые комбо</p>
-              <h3>{formatInteger(analysis.liveComboCount)}</h3>
-              <p>Что реально осталось в диапазоне после вычитания видимых карт борда.</p>
-            </article>
-            <article className="result-card">
-              <p className="card-label">Умерло от блокеров</p>
-              <h3>{formatInteger(analysis.blockedComboCount)}</h3>
-              <p>Разница между сырыми префлоп-комбо и тем, что пережило раздачу карт.</p>
-            </article>
-            <article className="result-card">
-              <p className="card-label">Доля живых</p>
-              <h3>{formatShare(analysis.liveComboCount / Math.max(1, analysis.rawComboCount), displayMode)}</h3>
-              <p>Сколько диапазона ещё существует как реальный набор стартовых комбо.</p>
-            </article>
-          </div>
-        </section>
-
-        <section className="surface jump-target" id="advanced-categories">
-          <div className="section-head compact">
-            <div>
-              <p className="kicker">Наполнение диапазона</p>
-              <h2>Готовые руки и дро в текущем рейндже</h2>
-            </div>
-            <p className="table-note">
-              Готовые руки разнесены по сильнейшей категории, дро считаются отдельно.
-              Готовые суммируются без пересечений, дро — могут пересекаться.
-            </p>
-          </div>
-
-          {analysis.postflopReady ? (
-            <div className="combo-breakdown">
-              <div className="combo-breakdown-group">
-                <h3 className="combo-breakdown-title">Готовые руки</h3>
-                {analysis.madeHandSummaries.length > 0 ? (
-                  <ul className="combo-breakdown-list">
-                    {analysis.madeHandSummaries.map((summary) => (
-                      <li className="combo-breakdown-row" key={summary.category}>
-                        <div className="combo-breakdown-header">
-                          <span className="combo-breakdown-name">
-                            {getMadeHandLabel(summary.category)}
-                          </span>
-                          <span className="combo-breakdown-stats">
-                            <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
-                            {formatShare(summary.share, displayMode, 12)}
-                          </span>
-                        </div>
-                        <ComboExamples examples={summary.examples} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="combo-breakdown-empty">
-                    Диапазон пуст — готовых рук пока нет.
-                  </p>
-                )}
+              <div className="combo-board-toolbar">
+                <p aria-live="polite" className="combo-board-hint">
+                  {analysis.board.length === 0
+                    ? 'Кликай по картам ниже — первые 3 становятся флопом, 4-я тёрном, 5-я ривером.'
+                    : `Выбрано ${analysis.board.length} из 5: ${analysis.board.map(formatCard).join(' ')}`}
+                </p>
+                <button
+                  aria-label="Очистить борд"
+                  className="mode-chip"
+                  disabled={analysis.board.length === 0}
+                  onClick={clearBoard}
+                  type="button"
+                >
+                  Очистить борд
+                </button>
               </div>
 
-              <div className="combo-breakdown-group">
-                <h3 className="combo-breakdown-title">Дро</h3>
-                {analysis.drawSummaries.length > 0 ? (
-                  <ul className="combo-breakdown-list">
-                    {analysis.drawSummaries.map((summary) => (
-                      <li className="combo-breakdown-row" key={summary.category}>
-                        <div className="combo-breakdown-header">
-                          <span className="combo-breakdown-name">
-                            {getDrawLabel(summary.category)}
-                          </span>
-                          <span className="combo-breakdown-stats">
-                            <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
-                            {formatShare(summary.share, displayMode, 12)}
-                          </span>
-                        </div>
-                        <ComboExamples examples={summary.examples} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="combo-breakdown-empty">
-                    На этом борде дро нет.
-                  </p>
-                )}
+              <div className="card-picker" role="group" aria-label="Card picker">
+                {cardSuits.map((suit) => (
+                  <div className="card-picker-row" key={suit}>
+                    <span
+                      className={`card-picker-suit ${suit === 'h' || suit === 'd' ? 'red' : 'dark'}`}
+                    >
+                      {suitGlyphMap[suit]}
+                      <span className="visually-hidden">{suitLabelMap[suit]}</span>
+                    </span>
+                    {rangeRanks.map((rank) => {
+                      const card = `${rank}${suit}` as CardCode
+                      const selected = boardCardSet.has(card)
+                      const boardFull = analysis.board.length >= 5 && !selected
+
+                      return (
+                        <button
+                          aria-label={`${rank}${suitGlyphMap[suit]}${selected ? ' выбрано' : ''}`}
+                          aria-pressed={selected}
+                          className={`card-picker-cell ${getCardTone(card)}${
+                            selected ? ' selected' : ''
+                          }${boardFull ? ' disabled' : ''}`}
+                          disabled={boardFull}
+                          key={card}
+                          onClick={() => toggleBoardCard(card)}
+                          type="button"
+                        >
+                          {rank}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
-            </div>
-          ) : (
-            <article className="result-card">
-              <p className="card-label">Ждём флоп</p>
-              <h3>Нужен флоп</h3>
-              <p>
-                Категории готовых рук и дро включатся, как только выложишь три карты
-                флопа. До этого матрица честно показывает только префлопные комбо и эффект
-                блокеров.
-              </p>
-            </article>
-          )}
-        </section>
-      </section>
+
+              <div className="summary-grid compact-summary">
+                <article className="result-card primary">
+                  <p className="card-label">Живые комбо</p>
+                  <h3>{formatInteger(analysis.liveComboCount)}</h3>
+                  <p>Что реально осталось в диапазоне после вычитания видимых карт борда.</p>
+                </article>
+                <article className="result-card">
+                  <p className="card-label">Умерло от блокеров</p>
+                  <h3>{formatInteger(analysis.blockedComboCount)}</h3>
+                  <p>Разница между сырыми префлоп-комбо и тем, что пережило раздачу карт.</p>
+                </article>
+                <article className="result-card">
+                  <p className="card-label">Доля живых</p>
+                  <h3>
+                    {formatShare(
+                      analysis.liveComboCount / Math.max(1, analysis.rawComboCount),
+                      displayMode,
+                    )}
+                  </h3>
+                  <p>Сколько диапазона ещё существует как реальный набор стартовых комбо.</p>
+                </article>
+              </div>
+            </section>
+
+            <section className="surface jump-target" id="advanced-categories">
+              <div className="section-head compact">
+                <div>
+                  <p className="kicker">Наполнение диапазона</p>
+                  <h2>Готовые руки и дро в текущем рейндже</h2>
+                </div>
+                <p className="table-note">
+                  Готовые руки разнесены по сильнейшей категории, дро считаются отдельно. Готовые
+                  суммируются без пересечений, дро — могут пересекаться.
+                </p>
+              </div>
+
+              {analysis.postflopReady ? (
+                <div className="combo-breakdown">
+                  <div className="combo-breakdown-group">
+                    <h3 className="combo-breakdown-title">Готовые руки</h3>
+                    {analysis.madeHandSummaries.length > 0 ? (
+                      <ul className="combo-breakdown-list">
+                        {analysis.madeHandSummaries.map((summary) => (
+                          <li className="combo-breakdown-row" key={summary.category}>
+                            <div className="combo-breakdown-header">
+                              <span className="combo-breakdown-name">
+                                {getMadeHandLabel(summary.category)}
+                              </span>
+                              <span className="combo-breakdown-stats">
+                                <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
+                                {formatShare(summary.share, displayMode, 12)}
+                              </span>
+                            </div>
+                            <ComboExamples examples={summary.examples} />
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="combo-breakdown-empty">Диапазон пуст — готовых рук пока нет.</p>
+                    )}
+                  </div>
+
+                  <div className="combo-breakdown-group">
+                    <h3 className="combo-breakdown-title">Дро</h3>
+                    {analysis.drawSummaries.length > 0 ? (
+                      <ul className="combo-breakdown-list">
+                        {analysis.drawSummaries.map((summary) => (
+                          <li className="combo-breakdown-row" key={summary.category}>
+                            <div className="combo-breakdown-header">
+                              <span className="combo-breakdown-name">
+                                {getDrawLabel(summary.category)}
+                              </span>
+                              <span className="combo-breakdown-stats">
+                                <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
+                                {formatShare(summary.share, displayMode, 12)}
+                              </span>
+                            </div>
+                            <ComboExamples examples={summary.examples} />
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="combo-breakdown-empty">На этом борде дро нет.</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <article className="result-card">
+                  <p className="card-label">Ждём флоп</p>
+                  <h3>Нужен флоп</h3>
+                  <p>
+                    Категории готовых рук и дро включатся, как только выложишь три карты флопа.
+                    До этого матрица честно показывает только префлопные комбо и эффект блокеров.
+                  </p>
+                </article>
+              )}
+            </section>
+          </section>
+        </>
+      )}
     </>
   )
 }

@@ -22,7 +22,7 @@ import {
 } from '../lib/pokerMath'
 
 function scrollToSection(sectionId: string) {
-  document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  document.getElementById(sectionId)?.scrollIntoView({ behavior: 'auto', block: 'start' })
 }
 
 type IgorModeProps = {

@@ -197,9 +197,8 @@
     rgba(255, 248, 232, 0.78);
   border: 1px solid rgba(64, 42, 26, 0.12);
   box-shadow:
-    0 26px 50px rgba(9, 37, 31, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.34);
-  backdrop-filter: blur(14px);
+    0 10px 20px rgba(9, 37, 31, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 .hero-panel,
@@ -217,7 +216,6 @@
   padding: clamp(22px, 3vw, 34px);
   border-radius: 32px;
   margin-bottom: 24px;
-  animation: rise-in 0.7s ease both;
 }
 
 .hero-copy {
@@ -332,7 +330,7 @@
   transform: translateY(-1px);
   border-color: rgba(24, 92, 76, 0.24);
   background: rgba(24, 92, 76, 0.08);
-  box-shadow: 0 12px 24px rgba(9, 37, 31, 0.08);
+  box-shadow: 0 8px 16px rgba(9, 37, 31, 0.06);
   outline: none;
 }
 
@@ -687,7 +685,7 @@
 .preset:focus-visible {
   transform: translateY(-1px);
   border-color: rgba(24, 92, 76, 0.3);
-  box-shadow: 0 12px 24px rgba(9, 37, 31, 0.1);
+  box-shadow: 0 8px 18px rgba(9, 37, 31, 0.08);
   outline: none;
 }
 
@@ -728,7 +726,6 @@
 
 .result-card {
   padding: 24px;
-  animation: rise-in 0.75s ease both;
   min-height: 172px;
 }
 
@@ -815,7 +812,6 @@
 
 .cheat-table {
   border-radius: 32px;
-  animation: rise-in 0.8s ease both;
 }
 
 .table-note {
@@ -950,7 +946,7 @@ tbody tr:hover td {
 .mode-chip:focus-visible {
   outline: none;
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(9, 37, 31, 0.08);
+  box-shadow: 0 8px 16px rgba(9, 37, 31, 0.06);
 }
 
 .igor-converter-grid {
@@ -1077,6 +1073,10 @@ tbody tr:hover td {
   margin-top: 24px;
 }
 
+.equity-layout {
+  align-items: start;
+}
+
 .combo-guide-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 24px;
@@ -1164,7 +1164,7 @@ tbody tr:hover td {
 .range-cell:focus-visible {
   transform: translateY(-1px);
   border-color: rgba(24, 92, 76, 0.3);
-  box-shadow: 0 10px 20px rgba(9, 37, 31, 0.08);
+  box-shadow: 0 8px 16px rgba(9, 37, 31, 0.06);
   outline: none;
 }
 
@@ -1475,16 +1475,85 @@ tbody tr:hover td {
   font-size: 0.94em;
 }
 
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
+.advanced-lock-wrap {
+  display: grid;
+  place-items: start center;
+  padding-top: 12px;
+}
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.advanced-lock-card {
+  width: min(100%, 760px);
+  padding: 28px;
+  border-radius: 32px;
+}
+
+.advanced-lock-card h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+  color: var(--ink-strong);
+}
+
+.advanced-lock-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: end;
+  margin-top: 24px;
+}
+
+.advanced-lock-form .mode-chip {
+  min-width: 220px;
+}
+
+.advanced-lock-note,
+.advanced-lock-error {
+  margin: 16px 0 0;
+  line-height: 1.55;
+}
+
+.advanced-lock-note {
+  color: var(--ink-soft);
+}
+
+.advanced-lock-error {
+  color: #9d2d2d;
+  font-weight: 700;
+}
+
+.equity-panel {
+  padding: 28px;
+}
+
+.equity-hand-grid {
+  margin-top: 24px;
+}
+
+.equity-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: end;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+
+.equity-toolbar .combo-board-toolbar {
+  margin-top: 0;
+}
+
+.equity-status-note {
+  margin: 14px 0 0;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.equity-status-note.warning {
+  color: #9d2d2d;
+  font-weight: 700;
 }
 
 @media (max-width: 980px) {
@@ -1545,6 +1614,15 @@ tbody tr:hover td {
 
   .igor-converter-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (pointer: coarse) {
+  .surface,
+  .result-card {
+    box-shadow:
+      0 8px 16px rgba(9, 37, 31, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
   }
 }
 
@@ -1677,6 +1755,16 @@ tbody tr:hover td {
 
   .card-picker-suit {
     font-size: 1.05rem;
+  }
+
+  .equity-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .advanced-lock-form {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .range-matrix {

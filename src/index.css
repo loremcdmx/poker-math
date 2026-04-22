@@ -33,10 +33,6 @@
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   margin: 0;
   min-width: 320px;
@@ -51,18 +47,11 @@ body {
 
 body::before {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 18%, rgba(16, 61, 51, 0.2), transparent 26%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 40%),
-    repeating-linear-gradient(
-      90deg,
-      rgba(16, 61, 51, 0.03) 0,
-      rgba(16, 61, 51, 0.03) 1px,
-      transparent 1px,
-      transparent 32px
-    );
+    radial-gradient(circle at 50% 18%, rgba(16, 61, 51, 0.16), transparent 24%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 38%);
   pointer-events: none;
 }
 
