@@ -8,9 +8,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px 18px;
-  margin-bottom: 18px;
+  justify-content: center;
+  gap: 12px 16px;
+  margin-bottom: 20px;
 }
 
 .jump-target {
@@ -20,23 +20,25 @@
 .mode-switch {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 8px;
-  width: min(100%, 700px);
-  padding: 8px;
+  justify-content: center;
+  gap: 6px;
+  width: max-content;
+  max-width: 100%;
+  padding: 6px;
   margin-bottom: 0;
   border-radius: 24px;
 }
 
 .mode-switch-item {
-  flex: 1 1 150px;
+  flex: 0 1 auto;
 }
 
 .toolbar-right {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 10px 14px;
-  margin-left: auto;
 }
 
 .global-display {
@@ -1380,13 +1382,38 @@ tbody tr:hover td {
     grid-template-columns: 1fr;
   }
 
+  .hero-copy {
+    text-align: center;
+    justify-items: center;
+  }
+
   .hero-copy h1 {
-    max-width: 12ch;
+    max-width: none;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-text {
+    max-width: none;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-tags {
+    justify-content: center;
   }
 
   .section-head {
-    align-items: start;
+    align-items: center;
+    text-align: center;
     flex-direction: column;
+  }
+
+  .section-head .number-field,
+  .section-head .bet-percent-field {
+    justify-self: center;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .focus-metrics {
