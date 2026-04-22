@@ -1814,3 +1814,273 @@ tbody tr:hover td {
     grid-template-columns: 1fr;
   }
 }
+
+/* ================= design polish pass ================= */
+
+.hero-focus {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 236, 0.1),
+    inset 0 -20px 40px rgba(0, 0, 0, 0.22),
+    0 22px 40px rgba(9, 37, 31, 0.3);
+  border: 1px solid rgba(255, 248, 236, 0.08);
+}
+
+.hero-focus::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(236, 181, 90, 0.55), transparent);
+  pointer-events: none;
+}
+
+.hero-focus .focus-label {
+  color: rgba(236, 181, 90, 0.78);
+}
+
+.hero-focus .focus-size {
+  background: linear-gradient(180deg, var(--felt-cream) 60%, rgba(236, 181, 90, 0.86));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.kicker,
+.section-head .kicker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-head .kicker::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgba(236, 181, 90, 0.18);
+}
+
+.result-card {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.result-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 32px rgba(9, 37, 31, 0.14);
+}
+
+.result-card h3 {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 6px;
+}
+
+.result-card h3::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 32px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  opacity: 0.6;
+}
+
+.result-card.primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.result-card.primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.6;
+}
+
+.result-card.primary h3::after {
+  background: linear-gradient(90deg, rgba(236, 181, 90, 0.9), transparent);
+  opacity: 0.85;
+}
+
+.preset {
+  position: relative;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.preset:hover:not(.active) {
+  transform: translateY(-1px);
+  border-color: rgba(24, 92, 76, 0.28);
+  box-shadow: 0 10px 20px rgba(9, 37, 31, 0.08);
+}
+
+.preset.active {
+  box-shadow:
+    0 18px 34px rgba(9, 37, 31, 0.2),
+    inset 0 0 0 1px rgba(236, 181, 90, 0.32);
+}
+
+.preset.active small {
+  color: rgba(255, 247, 224, 0.78);
+}
+
+.mode-switch-item.active,
+.toggle-item.active,
+.global-display-item.active,
+.mode-chip.active {
+  box-shadow:
+    0 14px 26px rgba(9, 37, 31, 0.18),
+    inset 0 0 0 1px rgba(236, 181, 90, 0.22);
+}
+
+.combo-breakdown-group {
+  position: relative;
+}
+
+.combo-breakdown-title {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.combo-breakdown-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgba(236, 181, 90, 0.16);
+}
+
+.combo-breakdown-row {
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+  border-left: 3px solid rgba(236, 181, 90, 0.3);
+}
+
+.combo-breakdown-row:hover {
+  border-color: rgba(24, 92, 76, 0.24);
+  box-shadow: 0 12px 22px rgba(9, 37, 31, 0.08);
+}
+
+.combo-breakdown-group:nth-of-type(2) .combo-breakdown-row {
+  border-left-color: rgba(24, 92, 76, 0.38);
+}
+
+.combo-breakdown-group:nth-of-type(3) .combo-breakdown-row {
+  border-left-color: rgba(158, 97, 30, 0.45);
+}
+
+.combo-breakdown-group:nth-of-type(4) .combo-breakdown-row {
+  border-left-color: rgba(120, 120, 120, 0.32);
+}
+
+.combo-pair {
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease;
+}
+
+.combo-pair:hover {
+  border-color: rgba(24, 92, 76, 0.28);
+  background: rgba(255, 255, 252, 0.96);
+}
+
+.hero-chip {
+  position: relative;
+}
+
+.hero-chip::after {
+  content: '→';
+  margin-left: 6px;
+  opacity: 0;
+  transform: translateX(-3px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.hero-chip:hover::after,
+.hero-chip:focus-visible::after {
+  opacity: 0.75;
+  transform: translateX(0);
+}
+
+.card-picker-cell.selected {
+  box-shadow:
+    0 10px 22px rgba(9, 37, 31, 0.22),
+    inset 0 0 0 1px rgba(236, 181, 90, 0.28);
+}
+
+.board-slot.next {
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.94), rgba(245, 235, 216, 0.82));
+}
+
+.board-slot.filled {
+  background: linear-gradient(180deg, rgba(255, 255, 252, 0.98), rgba(252, 246, 232, 0.9));
+}
+
+.range-cell {
+  transition:
+    transform 0.12s ease,
+    border-color 0.12s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.range-cell.active {
+  box-shadow:
+    0 10px 18px rgba(9, 37, 31, 0.22),
+    inset 0 0 0 1px rgba(236, 181, 90, 0.22);
+}
+
+.footnote,
+.table-note {
+  position: relative;
+}
+
+.table-wrap table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-wrap tbody tr {
+  transition: background 0.18s ease;
+}
+
+.table-wrap tbody tr:hover {
+  background: rgba(255, 248, 232, 0.4);
+}
+
+[role='tabpanel'] {
+  animation: rise-in 0.5s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
