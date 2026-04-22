@@ -4,6 +4,7 @@ import { formatInteger, formatShare } from '../lib/formatters'
 import {
   analyzeRange,
   cardSuits,
+  getBackdoorLabel,
   getDrawLabel,
   getMadeHandLabel,
   getPresetRangeCells,
@@ -577,11 +578,12 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
               <div className="section-head compact">
                 <div>
                   <p className="kicker">Наполнение диапазона</p>
-                  <h2>Готовые руки и дро в текущем рейндже</h2>
+                  <h2>Из чего сделан диапазон на текущей улице</h2>
                 </div>
                 <p className="table-note">
-                  Готовые руки разнесены по сильнейшей категории, дро считаются отдельно. Готовые
-                  суммируются без пересечений, дро — могут пересекаться.
+                  Готовые руки считаются по сильнейшей категории без пересечений. Дро и
+                  бекдоры могут пересекаться и считаются отдельно. На ривере дро пропадают
+                  — всё, что не собрало пару, уходит в пустые руки.
                 </p>
               </div>
 
@@ -607,31 +609,92 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
                         ))}
                       </ul>
                     ) : (
-                      <p className="combo-breakdown-empty">Диапазон пуст — готовых рук пока нет.</p>
+                      <p className="combo-breakdown-empty">
+                        В диапазоне нет руки сильнее пары.
+                      </p>
                     )}
                   </div>
 
+                  {analysis.street !== 'river' ? (
+                    <div className="combo-breakdown-group">
+                      <h3 className="combo-breakdown-title">Дро</h3>
+                      {analysis.drawSummaries.length > 0 ? (
+                        <ul className="combo-breakdown-list">
+                          {analysis.drawSummaries.map((summary) => (
+                            <li className="combo-breakdown-row" key={summary.category}>
+                              <div className="combo-breakdown-header">
+                                <span className="combo-breakdown-name">
+                                  {getDrawLabel(summary.category)}
+                                </span>
+                                <span className="combo-breakdown-stats">
+                                  <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
+                                  {formatShare(summary.share, displayMode, 12)}
+                                </span>
+                              </div>
+                              <ComboExamples examples={summary.examples} />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="combo-breakdown-empty">
+                          На этом борде готовых дро нет.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {analysis.street === 'flop' ? (
+                    <div className="combo-breakdown-group">
+                      <h3 className="combo-breakdown-title">Бекдоры</h3>
+                      {analysis.backdoorSummaries.length > 0 ? (
+                        <ul className="combo-breakdown-list">
+                          {analysis.backdoorSummaries.map((summary) => (
+                            <li className="combo-breakdown-row" key={summary.category}>
+                              <div className="combo-breakdown-header">
+                                <span className="combo-breakdown-name">
+                                  {getBackdoorLabel(summary.category)}
+                                </span>
+                                <span className="combo-breakdown-stats">
+                                  <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
+                                  {formatShare(summary.share, displayMode, 12)}
+                                </span>
+                              </div>
+                              <ComboExamples examples={summary.examples} />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="combo-breakdown-empty">
+                          На этом флопе бекдоры не выделены.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+
                   <div className="combo-breakdown-group">
-                    <h3 className="combo-breakdown-title">Дро</h3>
-                    {analysis.drawSummaries.length > 0 ? (
+                    <h3 className="combo-breakdown-title">Пустые руки</h3>
+                    {analysis.emptySummary ? (
                       <ul className="combo-breakdown-list">
-                        {analysis.drawSummaries.map((summary) => (
-                          <li className="combo-breakdown-row" key={summary.category}>
-                            <div className="combo-breakdown-header">
-                              <span className="combo-breakdown-name">
-                                {getDrawLabel(summary.category)}
-                              </span>
-                              <span className="combo-breakdown-stats">
-                                <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
-                                {formatShare(summary.share, displayMode, 12)}
-                              </span>
-                            </div>
-                            <ComboExamples examples={summary.examples} />
-                          </li>
-                        ))}
+                        <li className="combo-breakdown-row">
+                          <div className="combo-breakdown-header">
+                            <span className="combo-breakdown-name">
+                              {analysis.street === 'river'
+                                ? 'Всё, что не дотянулось до пары'
+                                : 'Без пары, без дро и без бекдоров'}
+                            </span>
+                            <span className="combo-breakdown-stats">
+                              <strong>{formatInteger(analysis.emptySummary.count)}</strong>{' '}
+                              комбо ·{' '}
+                              {formatShare(analysis.emptySummary.share, displayMode, 12)}
+                            </span>
+                          </div>
+                          <ComboExamples examples={analysis.emptySummary.examples} />
+                        </li>
                       </ul>
                     ) : (
-                      <p className="combo-breakdown-empty">На этом борде дро нет.</p>
+                      <p className="combo-breakdown-empty">
+                        Все живые комбо с чем-то зацепились — пустых рук нет.
+                      </p>
                     )}
                   </div>
                 </div>

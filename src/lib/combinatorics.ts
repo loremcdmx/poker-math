@@ -16,6 +16,8 @@ export type MadeHandCategory =
   | 'pair'
   | 'high_card'
 export type DrawCategory = 'flush_draw' | 'oesd' | 'gutshot' | 'combo_draw'
+export type BackdoorCategory = 'backdoor_flush' | 'backdoor_straight'
+export type EmptyCategory = 'air'
 export type RangePreset =
   | 'clear'
   | 'all'
@@ -47,14 +49,17 @@ export type CategorySummary<TCategory extends string> = {
 }
 
 export type RangeAnalysis = {
+  backdoorSummaries: CategorySummary<BackdoorCategory>[]
   blockedComboCount: number
   board: CardCode[]
   drawSummaries: CategorySummary<DrawCategory>[]
+  emptySummary: CategorySummary<EmptyCategory> | null
   liveComboCount: number
   madeHandSummaries: CategorySummary<MadeHandCategory>[]
   postflopReady: boolean
   rawComboCount: number
   selectedCellCount: number
+  street: 'preflop' | 'flop' | 'turn' | 'river'
 }
 
 const rankValueMap: Record<RangeRank, number> = {
@@ -82,10 +87,10 @@ const madeHandOrder: MadeHandCategory[] = [
   'trips',
   'two_pair',
   'pair',
-  'high_card',
 ]
 
 const drawOrder: DrawCategory[] = ['combo_draw', 'flush_draw', 'oesd', 'gutshot']
+const backdoorOrder: BackdoorCategory[] = ['backdoor_flush', 'backdoor_straight']
 
 function getRankValue(rank: RangeRank) {
   return rankValueMap[rank]
@@ -270,6 +275,40 @@ function getDrawFlags(cards: CardCode[], boardLength: number) {
     flush_draw: flushDraw,
     gutshot,
     oesd,
+  }
+}
+
+function getBackdoorFlags(cards: CardCode[], boardLength: number) {
+  if (boardLength !== 3) {
+    return { backdoor_flush: false, backdoor_straight: false }
+  }
+
+  const ranks = cards.map((card) => card[0] as RangeRank)
+  const suits = cards.map((card) => card[1] as CardSuit)
+  const suitCounts = Array.from(countBy(suits).values())
+  const values = ranks.map(getRankValue)
+
+  const maxSuit = Math.max(0, ...suitCounts)
+  const backdoorFlush = maxSuit === 3
+
+  const backdoorStraight = (() => {
+    const unique = Array.from(new Set(values)).sort((left, right) => left - right)
+    if (unique.length < 3) {
+      return false
+    }
+    const expanded = unique.includes(14) ? [...unique, 1] : unique
+    const sorted = Array.from(new Set(expanded)).sort((left, right) => left - right)
+    for (let index = 0; index <= sorted.length - 3; index += 1) {
+      if (sorted[index + 2] - sorted[index] <= 4) {
+        return true
+      }
+    }
+    return false
+  })()
+
+  return {
+    backdoor_flush: backdoorFlush,
+    backdoor_straight: backdoorStraight,
   }
 }
 
@@ -475,15 +514,50 @@ export function analyzeRange(selectedCells: string[], boardSlots: ReadonlyArray<
     (combo) => !combo.cards.some((card) => boardSet.has(card)),
   )
 
+  const street: RangeAnalysis['street'] =
+    board.length === 5 ? 'river' : board.length === 4 ? 'turn' : board.length === 3 ? 'flop' : 'preflop'
+
   const combosWithHands = board.length >= 3
-    ? liveCombos.map((combo) => ({
-        ...combo,
-        drawFlags: getDrawFlags([...combo.cards, ...board], board.length),
-        madeHand: getMadeHandCategory([...combo.cards, ...board]),
-      }))
+    ? liveCombos.map((combo) => {
+        const allCards = [...combo.cards, ...board]
+        const drawFlags = getDrawFlags(allCards, board.length)
+        const backdoorFlags = getBackdoorFlags(allCards, board.length)
+        const madeHand = getMadeHandCategory(allCards)
+        const hasAnyDraw =
+          drawFlags.combo_draw || drawFlags.flush_draw || drawFlags.oesd || drawFlags.gutshot
+        const hasAnyBackdoor = backdoorFlags.backdoor_flush || backdoorFlags.backdoor_straight
+        const isAir = madeHand === 'high_card' && !hasAnyDraw && !hasAnyBackdoor
+
+        return {
+          ...combo,
+          backdoorFlags,
+          drawFlags,
+          isAir,
+          madeHand,
+        }
+      })
     : []
 
+  const madeCombos = combosWithHands.filter((combo) => combo.madeHand !== 'high_card')
+  const airCombos = combosWithHands.filter((combo) => combo.isAir)
+
+  const emptySummary: CategorySummary<EmptyCategory> | null =
+    board.length >= 3 && airCombos.length > 0
+      ? {
+          category: 'air',
+          count: airCombos.length,
+          examples: airCombos.slice(0, 3).map((combo) => combo.combo),
+          share: combosWithHands.length === 0 ? 0 : airCombos.length / combosWithHands.length,
+        }
+      : null
+
   return {
+    backdoorSummaries:
+      board.length === 3
+        ? summarizeCategories(backdoorOrder, combosWithHands, (combo) =>
+            backdoorOrder.filter((category) => combo.backdoorFlags[category]),
+          )
+        : [],
     blockedComboCount: rawCombos.length - liveCombos.length,
     board,
     drawSummaries:
@@ -492,15 +566,37 @@ export function analyzeRange(selectedCells: string[], boardSlots: ReadonlyArray<
             drawOrder.filter((category) => combo.drawFlags[category]),
           )
         : [],
+    emptySummary,
     liveComboCount: liveCombos.length,
     madeHandSummaries:
       board.length >= 3
-        ? summarizeCategories(madeHandOrder, combosWithHands, (combo) => [combo.madeHand])
+        ? summarizeCategories(
+            madeHandOrder,
+            madeCombos.map((combo) => ({ ...combo })),
+            (combo) => [combo.madeHand as MadeHandCategory],
+          )
         : [],
     postflopReady: board.length >= 3,
     rawComboCount: rawCombos.length,
     selectedCellCount: selectedCells.length,
+    street,
   } satisfies RangeAnalysis
+}
+
+export function getBackdoorLabel(category: BackdoorCategory) {
+  switch (category) {
+    case 'backdoor_flush':
+      return 'Бекдор-флеш'
+    case 'backdoor_straight':
+      return 'Бекдор-стрит'
+  }
+}
+
+export function getEmptyLabel(category: EmptyCategory) {
+  if (category === 'air') {
+    return 'Воздух'
+  }
+  return category
 }
 
 export function getMadeHandLabel(category: MadeHandCategory) {
