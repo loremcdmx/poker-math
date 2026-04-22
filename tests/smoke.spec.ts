@@ -73,6 +73,6 @@ test('advanced mode exposes range grid and board analysis', async ({ page }) => 
   await page.getByRole('button', { name: 'K♦', exact: true }).click()
   await page.getByRole('button', { name: '7♣', exact: true }).click()
 
-  await expect(page.getByText('Made hand breakdown текущего диапазона.')).toBeVisible()
+  await expect(page.getByText('Готовые руки в текущем диапазоне.')).toBeVisible()
   await expect(page.locator('#advanced-panel')).toContainText('Живые комбо')
 })

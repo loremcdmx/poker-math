@@ -185,8 +185,8 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
           <h1>Комбинаторика, блокеры и разбор диапазона по борду.</h1>
           <p className="hero-text">
             Это уже не про один сайзинг, а про сам диапазон: сколько в нём живых комбо,
-            какие руки доезжают на конкретной доске и как блокеры режут сырые префлопные
-            числа. Сверху шпаргалка памяти, ниже матрица и живой board-analyzer.
+            какие руки доезжают на конкретном борде и как блокеры режут сырые префлопные
+            числа. Сверху опорные числа, ниже матрица и живой разбор борда.
           </p>
           <HeroActionChips
             ariaLabel="Быстрые переходы адвансд-режима"
@@ -225,11 +225,11 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
         <div className="section-head compact">
           <div>
             <p className="kicker">Шпаргалка</p>
-            <h2>Базовая память по префлоп-комбинаторике</h2>
+            <h2>Опорные числа префлоп-комбо</h2>
           </div>
           <p className="table-note">
-            Самые полезные числа здесь конечны и хорошо запоминаются. Идея простая: не
-            пересчитывай заново, а держи в голове несколько опорных шаблонов и blocker-лестницу.
+            Эти цифры конечны и быстро запоминаются. Идея простая: не пересчитывать с
+            нуля каждый раз, а держать в голове пару опорных шаблонов и лестницу блокеров.
           </p>
         </div>
 
@@ -254,16 +254,16 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
             <p className="card-label">Один блокер ранга</p>
             <h3>16 → 12</h3>
             <p>
-              Если на борде лежит один из нужных рангов, семейство вроде <strong>AK</strong>{' '}
+              Если на борде лежит одна карта нужного ранга, семейство <strong>AK</strong>{' '}
               теряет четверть комбо и падает с <strong>16</strong> до <strong>12</strong>.
             </p>
           </article>
           <article className="result-card">
-            <p className="card-label">По одному блокеру обоих рангов</p>
+            <p className="card-label">Блокер на оба ранга</p>
             <h3>16 → 9</h3>
             <p>
-              Когда видишь и один туз, и одного короля, у <strong>AK</strong> остаётся всего{' '}
-              <strong>9</strong> живых комбо вместо 16.
+              Если на борде и туз, и король, у <strong>AK</strong> живых комбо остаётся{' '}
+              <strong>9</strong> из 16.
             </p>
           </article>
         </div>
@@ -353,11 +353,11 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
           <div className="section-head compact">
             <div>
               <p className="kicker">Борд</p>
-              <h2>Поставь флоп, тёрн и ривер, чтобы увидеть live combos</h2>
+              <h2>Поставь флоп, тёрн и ривер — увидишь живые комбо</h2>
             </div>
             <p className="table-note">
-              Здесь матрица перестаёт быть абстракцией: борд сразу выбивает мёртвые комбо и
-              пересчитывает, какие made hands и draws остались в твоём диапазоне.
+              Здесь матрица перестаёт быть абстракцией: борд сразу выбивает мёртвые комбо
+              и показывает, какие готовые руки и дро остались в твоём диапазоне.
             </p>
           </div>
 
@@ -445,17 +445,17 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
             <article className="result-card primary">
               <p className="card-label">Живые комбо</p>
               <h3>{formatInteger(analysis.liveComboCount)}</h3>
-              <p>То, что реально осталось в диапазоне после вычитания видимых карт борда.</p>
+              <p>Что реально осталось в диапазоне после вычитания видимых карт борда.</p>
             </article>
             <article className="result-card">
               <p className="card-label">Умерло от блокеров</p>
               <h3>{formatInteger(analysis.blockedComboCount)}</h3>
-              <p>Это разница между сырыми префлоп-комбо и тем, что пережило раздачу карт.</p>
+              <p>Разница между сырыми префлоп-комбо и тем, что пережило раздачу карт.</p>
             </article>
             <article className="result-card">
               <p className="card-label">Доля живых</p>
               <h3>{formatShare(analysis.liveComboCount / Math.max(1, analysis.rawComboCount), displayMode)}</h3>
-              <p>Сколько диапазона ещё существует как реальный набор hole-card комбинаций.</p>
+              <p>Сколько диапазона ещё существует как реальный набор стартовых комбо.</p>
             </article>
           </div>
         </section>
@@ -467,8 +467,8 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
               <h2>Какие руки и дро живут в выбранном диапазоне</h2>
             </div>
             <p className="table-note">
-              Ниже strongest-hand классификация для made hands и отдельный overlay для дро.
-              Made hands суммируются эксклюзивно, а draws могут пересекаться.
+              Готовые руки разнесены по сильнейшей категории, дро считаются отдельно.
+              Готовые суммируются без пересечений, дро — могут пересекаться.
             </p>
           </div>
 
@@ -476,7 +476,7 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
             <div className="combo-table-stack">
               <div className="table-wrap">
                 <table>
-                  <caption>Made hand breakdown текущего диапазона.</caption>
+                  <caption>Готовые руки в текущем диапазоне.</caption>
                   <thead>
                     <tr>
                       <th scope="col">Категория</th>
@@ -506,7 +506,7 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
 
               <div className="table-wrap">
                 <table>
-                  <caption>Draw breakdown текущего диапазона.</caption>
+                  <caption>Дро в текущем диапазоне.</caption>
                   <thead>
                     <tr>
                       <th scope="col">Дро</th>
@@ -528,7 +528,7 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
                     ) : (
                       <tr>
                         <td colSpan={4}>
-                          На этом борде дро не обнаружены или board-анализ ещё не включён.
+                          На этом борде дро нет, либо разбор борда ещё не включён.
                         </td>
                       </tr>
                     )}
@@ -539,10 +539,11 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
           ) : (
             <article className="result-card">
               <p className="card-label">Ждём флоп</p>
-              <h3>Нужны 3 карты</h3>
+              <h3>Нужен флоп</h3>
               <p>
-                Постфлоп-категории включаются, как только ты задаёшь хотя бы флоп. До этого
-                матрица честно показывает только префлопную комбинаторику и blocker-эффект.
+                Категории готовых рук и дро включатся, как только выложишь три карты
+                флопа. До этого матрица честно показывает только префлопные комбо и эффект
+                блокеров.
               </p>
             </article>
           )}

@@ -533,7 +533,7 @@ export function getDrawLabel(category: DrawCategory) {
     case 'flush_draw':
       return 'Флеш-дро'
     case 'oesd':
-      return 'OESD'
+      return 'Стрит-дро'
     case 'gutshot':
       return 'Гатшот'
   }

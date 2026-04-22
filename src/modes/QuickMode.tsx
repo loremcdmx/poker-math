@@ -231,11 +231,10 @@ export function QuickMode({
               </p>
             ) : null}
             <p>
-              Оппонент платит <strong>{metrics.valueToBluff.denominator}</strong>, чтобы
-              бороться за <strong>{metrics.valueToBluff.numerator}</strong>{' '}
-              {pluralizeRu(metrics.valueToBluff.numerator, ['часть', 'части', 'частей'])}{' '}
-              банка. Это то же зеркало, что и <strong>value:bluff</strong>, просто с точки
-              зрения колла.
+              Оппонент доплачивает <strong>{metrics.valueToBluff.denominator}</strong>, чтобы
+              забрать банк в <strong>{metrics.valueToBluff.numerator}</strong>{' '}
+              {pluralizeRu(metrics.valueToBluff.numerator, ['часть', 'части', 'частей'])}.
+              Это те же пот-оддсы, просто записаны со стороны колла.
             </p>
           </article>
 
@@ -254,8 +253,9 @@ export function QuickMode({
               </p>
             ) : null}
             <p>
-              Если FE читается как <strong>a/b</strong>, то balanced{' '}
-              <strong>value:bluff = b:a</strong>. Запоминай зеркало, а не две разные цифры.
+              Если FE читается как <strong>a/b</strong>, то баланс по{' '}
+              <strong>value:bluff</strong> читается как <strong>b:a</strong>. Одна дробь
+              обслуживает обе задачи.
             </p>
           </article>
 
@@ -263,8 +263,8 @@ export function QuickMode({
             <p className="card-label">Блефов в ставке</p>
             <h3>{formatShare(metrics.bluffShare, displayMode)}</h3>
             <p>
-              Это доля блефов в betting range, а не процент фолдов, который нужен. На
-              ривере эта же цифра совпадает с <strong>equity без FE</strong>.
+              Это доля блефов в беттинг-рейндже, а не процент фолдов, который нужен. На
+              ривере эта же цифра равна <strong>equity без FE</strong>.
             </p>
           </article>
         </section>

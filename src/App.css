@@ -1058,6 +1058,13 @@ tbody tr:hover td {
   max-width: 12ch;
 }
 
+#advanced-guide,
+#advanced-grid,
+#advanced-board,
+#advanced-categories {
+  padding: clamp(22px, 3vw, 30px);
+}
+
 .advanced-layout,
 .combo-guide-grid,
 .combo-table-stack {
@@ -1379,7 +1386,7 @@ tbody tr:hover td {
   .summary-grid,
   .advanced-layout,
   .combo-guide-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hero-copy {
@@ -1407,6 +1414,13 @@ tbody tr:hover td {
     align-items: center;
     text-align: center;
     flex-direction: column;
+  }
+
+  .section-head > *,
+  .section-head p,
+  .section-head h2 {
+    max-width: 100%;
+    overflow-wrap: break-word;
   }
 
   .section-head .number-field,
@@ -1535,6 +1549,25 @@ tbody tr:hover td {
   .combo-board-toolbar {
     align-items: start;
     flex-direction: column;
+  }
+
+  .card-picker {
+    padding: 10px;
+  }
+
+  .card-picker-row {
+    grid-template-columns: 24px repeat(13, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .card-picker-cell {
+    padding: 6px 2px;
+    min-height: 36px;
+    font-size: 0.84rem;
+  }
+
+  .card-picker-suit {
+    font-size: 1.05rem;
   }
 
   .range-matrix {
