@@ -32,6 +32,29 @@ const suitLabelMap: Record<CardSuit, string> = {
 const boardLabels = ['Флоп 1', 'Флоп 2', 'Флоп 3', 'Тёрн', 'Ривер'] as const
 const rangeGrid = getRangeGrid()
 
+const OUTS_PRESETS: Array<{ outs: number; label: string }> = [
+  { outs: 4, label: 'Гатшот' },
+  { outs: 8, label: 'Стрит-дро' },
+  { outs: 9, label: 'Флеш-дро' },
+  { outs: 12, label: 'FD + гатшот' },
+  { outs: 15, label: 'FD + стрит-дро' },
+]
+
+function flopToRiverEquity(outs: number) {
+  if (outs <= 0) return 0
+  const clampedOuts = Math.min(outs, 47)
+  const cardsRemaining = 47
+  const misses = (cardsRemaining - clampedOuts) * (cardsRemaining - 1 - clampedOuts)
+  const total = cardsRemaining * (cardsRemaining - 1)
+  return 1 - misses / total
+}
+
+function turnToRiverEquity(outs: number) {
+  if (outs <= 0) return 0
+  const clampedOuts = Math.min(outs, 46)
+  return clampedOuts / 46
+}
+
 type DragMode = 'add' | 'remove' | null
 
 const presetButtons = [
@@ -106,8 +129,18 @@ export function CombinatoricsMode({ displayMode }: CombinatoricsModeProps) {
     analysis.board.length === 0 ? 'борд пока пустой' : analysis.board.map(formatCard).join(' ')
   const boardCardSet = new Set(analysis.board)
   const firstEmptyBoardSlot = boardCards.indexOf('')
+  const [outs, setOuts] = useState(9)
+  const safeOuts = Math.max(0, Math.min(20, Math.round(outs)))
+  const flopEquity = flopToRiverEquity(safeOuts)
+  const turnEquity = turnToRiverEquity(safeOuts)
+  const flopRule = Math.min(100, safeOuts * 4)
+  const turnRule = Math.min(100, safeOuts * 2)
+  const flopDelta = flopRule - flopEquity * 100
+  const turnDelta = turnRule - turnEquity * 100
+
   const heroActions = [
     { href: '#combo-guide', label: 'Шпаргалка' },
+    { href: '#combo-outs', label: 'Ауты' },
     { href: '#combo-grid', label: 'Матрица' },
     { href: '#combo-board', label: 'Борд' },
     { href: '#combo-categories', label: 'Категории' },
@@ -307,7 +340,119 @@ export function CombinatoricsMode({ displayMode }: CombinatoricsModeProps) {
                   <strong>9</strong> из 16.
                 </p>
               </article>
+              <article className="result-card">
+                <p className="card-label">Всего комбо на префлопе</p>
+                <h3>1 326</h3>
+                <p>
+                  <strong>52 × 51 / 2</strong> = <strong>1 326</strong>. Карманка — 0,45%,
+                  suited non-pair — 0,30%, offsuit — 0,90% всей деки.
+                </p>
+              </article>
+              <article className="result-card">
+                <p className="card-label">Правило 4 и 2</p>
+                <h3>×4 на флопе, ×2 на тёрне</h3>
+                <p>
+                  Умножаешь ауты на <strong>4</strong> на флопе и на <strong>2</strong> на
+                  тёрне — получаешь equity до ривера с точностью ±2%.
+                </p>
+              </article>
             </div>
+          </section>
+
+          <section className="surface jump-target" id="combo-outs">
+            <div className="section-head compact">
+              <div>
+                <p className="kicker">Ауты → equity</p>
+                <h2>Правило 4 и 2 в деле</h2>
+              </div>
+              <p className="table-note">
+                Сколько карт достраивают тебя до нужной руки — таких карт и есть ауты. На
+                флопе умножаешь их на 4, на тёрне — на 2, и получаешь грубую оценку equity до
+                ривера. Ниже рядом с приближением показана точная формула и погрешность.
+              </p>
+            </div>
+
+            <div className="outs-control">
+              <label className="outs-slider">
+                <span className="outs-slider-label">Ауты</span>
+                <input
+                  aria-label="Outs count"
+                  className="outs-range"
+                  max={20}
+                  min={0}
+                  onChange={(event) => setOuts(Number(event.target.value))}
+                  step={1}
+                  type="range"
+                  value={safeOuts}
+                />
+                <div aria-hidden="true" className="outs-scale">
+                  <span>0</span>
+                  <span>4</span>
+                  <span>8</span>
+                  <span>12</span>
+                  <span>16</span>
+                  <span>20</span>
+                </div>
+              </label>
+              <div className="outs-counter" aria-live="polite">
+                <strong>{safeOuts}</strong> аут{safeOuts === 1 ? '' : safeOuts >= 2 && safeOuts <= 4 ? 'а' : 'ов'}
+              </div>
+            </div>
+
+            <div className="outs-presets">
+              {OUTS_PRESETS.map((preset) => (
+                <button
+                  className={
+                    safeOuts === preset.outs ? 'quick-chip active' : 'quick-chip'
+                  }
+                  key={preset.label}
+                  onClick={() => setOuts(preset.outs)}
+                  type="button"
+                >
+                  {preset.label}
+                  <span className="outs-preset-count">{preset.outs}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="outs-output">
+              <article className="result-card primary">
+                <p className="card-label">Флоп → ривер</p>
+                <h3>≈ {formatShare(flopRule / 100, displayMode, 10)}</h3>
+                <p>
+                  Точно <strong>{formatShare(flopEquity, displayMode, 12)}</strong>. Правило
+                  держится {Math.abs(flopDelta) < 0.05
+                    ? 'идеально'
+                    : `с погрешностью ~${Math.abs(flopDelta).toFixed(1)}%`}
+                  {flopDelta > 0 ? ' (приближение завышает)' : flopDelta < 0 ? ' (приближение занижает)' : ''}.
+                </p>
+              </article>
+              <article className="result-card">
+                <p className="card-label">Тёрн → ривер</p>
+                <h3>≈ {formatShare(turnRule / 100, displayMode, 10)}</h3>
+                <p>
+                  Точно <strong>{formatShare(turnEquity, displayMode, 12)}</strong>. Правило
+                  держится {Math.abs(turnDelta) < 0.05
+                    ? 'идеально'
+                    : `с погрешностью ~${Math.abs(turnDelta).toFixed(1)}%`}
+                  {turnDelta > 0 ? ' (приближение завышает)' : turnDelta < 0 ? ' (приближение занижает)' : ''}.
+                </p>
+              </article>
+              <article className="result-card">
+                <p className="card-label">Pot odds, которые надо отбить</p>
+                <h3>{formatShare(flopEquity, displayMode, 12)}</h3>
+                <p>
+                  Чтобы колл был нулевым на флопе, тебе нужны <strong>pot odds</strong> не
+                  хуже этой цифры. Например, ставка <strong>1/2 банка</strong> даёт{' '}
+                  <strong>25%</strong> equity к колл-порогу.
+                </p>
+              </article>
+            </div>
+
+            <p className="outs-note">
+              Формулы: флоп → ривер = 1 − C(47−outs, 2)/C(47, 2), тёрн → ривер = outs / 46.
+              Правило подводит при больших значениях (≥ 13 аутов) — там пересчитывай точно.
+            </p>
           </section>
 
           <section className="surface jump-target" id="combo-grid">

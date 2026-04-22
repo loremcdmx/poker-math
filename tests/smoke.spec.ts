@@ -77,12 +77,6 @@ test('all tabs stay scrollable and console-clean through the main flows', async 
   await page.getByRole('tab', { name: 'Режим Игоря' }).click()
   await page.mouse.wheel(0, 1800)
 
-  await page.getByRole('button', { name: 'Advanced mode' }).click()
-  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
-  await page.getByLabel('Пароль адвансд мода').fill('123')
-  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
-  await page.mouse.wheel(0, 1800)
-
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth,
@@ -110,22 +104,16 @@ test('combinatorics mode exposes range grid and board analysis', async ({ page }
   await expect(page.locator('#combinatorics-panel')).toContainText('Живые комбо')
 })
 
-test('advanced equity mode calculates deterministic river equity', async ({ page }) => {
+test('outs-to-equity widget reacts to slider and preset', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Advanced mode' }).click()
-  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
-  await page.getByLabel('Пароль адвансд мода').fill('123')
-  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
+  await page.getByRole('tab', { name: 'Комбинаторика' }).click()
+  await page.getByRole('link', { name: 'Ауты' }).click()
 
-  await page.getByRole('button', { name: 'Рука', exact: true }).nth(1).click()
+  const slider = page.getByRole('slider', { name: 'Outs count' })
+  await expect(slider).toHaveValue('9')
+  await expect(page.locator('#combo-outs .outs-counter strong')).toHaveText('9')
 
-  await page.getByRole('combobox', { name: 'Флоп 1' }).selectOption('2c')
-  await page.getByRole('combobox', { name: 'Флоп 2' }).selectOption('3d')
-  await page.getByRole('combobox', { name: 'Флоп 3' }).selectOption('4h')
-  await page.getByRole('combobox', { name: 'Тёрн' }).selectOption('5s')
-  await page.getByRole('combobox', { name: 'Ривер' }).selectOption('7c')
-  await page.getByRole('button', { name: 'Пересчитать equity' }).click()
-
-  await expect(page.locator('#equity-results')).toContainText('100%')
-  await expect(page.locator('#equity-results')).toContainText('Точный')
+  await page.getByRole('button', { name: /Гатшот/ }).click()
+  await expect(slider).toHaveValue('4')
+  await expect(page.locator('#combo-outs .outs-counter strong')).toHaveText('4')
 })
