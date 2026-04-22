@@ -1366,6 +1366,115 @@ tbody tr:hover td {
   margin-top: 0;
 }
 
+.combo-breakdown {
+  display: grid;
+  gap: 28px;
+  margin-top: 20px;
+}
+
+.combo-breakdown-group {
+  display: grid;
+  gap: 14px;
+}
+
+.combo-breakdown-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.6vw, 1.9rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--ink-strong);
+}
+
+.combo-breakdown-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.combo-breakdown-row {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(58, 38, 23, 0.1);
+  background: rgba(255, 252, 246, 0.86);
+  display: grid;
+  gap: 10px;
+}
+
+.combo-breakdown-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 14px;
+}
+
+.combo-breakdown-name {
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+.combo-breakdown-stats {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.combo-breakdown-stats strong {
+  color: var(--ink-strong);
+}
+
+.combo-breakdown-empty {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 252, 246, 0.6);
+  color: var(--ink-soft);
+  font-size: 0.94rem;
+}
+
+.combo-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.combo-pair {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 250, 0.9);
+  border: 1px solid rgba(58, 38, 23, 0.12);
+}
+
+.combo-card-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.02rem;
+  line-height: 1;
+}
+
+.combo-card-chip.red {
+  color: #9d2d2d;
+}
+
+.combo-card-chip.dark {
+  color: var(--ink-strong);
+}
+
+.combo-card-rank {
+  font-weight: 700;
+}
+
+.combo-card-suit {
+  font-size: 0.94em;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;

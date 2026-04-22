@@ -57,15 +57,36 @@ function formatCard(card: CardCode) {
   return `${card[0]}${suitGlyphMap[card[1] as keyof typeof suitGlyphMap]}`
 }
 
-function formatCombo(combo: string) {
-  const firstCard = combo.slice(0, 2) as CardCode
-  const secondCard = combo.slice(2, 4) as CardCode
-
-  return `${formatCard(firstCard)} ${formatCard(secondCard)}`
-}
-
 function getCardTone(card: CardCode) {
   return card[1] === 'h' || card[1] === 'd' ? 'red' : 'dark'
+}
+
+function ComboCard({ card }: { card: CardCode }) {
+  const rank = card[0]
+  const suit = card[1] as keyof typeof suitGlyphMap
+  return (
+    <span className={`combo-card-chip ${getCardTone(card)}`}>
+      <span className="combo-card-rank">{rank}</span>
+      <span className="combo-card-suit">{suitGlyphMap[suit]}</span>
+    </span>
+  )
+}
+
+function ComboExamples({ examples }: { examples: readonly string[] }) {
+  return (
+    <div className="combo-examples">
+      {examples.map((combo) => {
+        const firstCard = combo.slice(0, 2) as CardCode
+        const secondCard = combo.slice(2, 4) as CardCode
+        return (
+          <span className="combo-pair" key={combo}>
+            <ComboCard card={firstCard} />
+            <ComboCard card={secondCard} />
+          </span>
+        )
+      })}
+    </div>
+  )
 }
 
 type AdvancedModeProps = {
@@ -463,8 +484,8 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
         <section className="surface jump-target" id="advanced-categories">
           <div className="section-head compact">
             <div>
-              <p className="kicker">Категории</p>
-              <h2>Какие руки и дро живут в выбранном диапазоне</h2>
+              <p className="kicker">Наполнение диапазона</p>
+              <h2>Готовые руки и дро в текущем рейндже</h2>
             </div>
             <p className="table-note">
               Готовые руки разнесены по сильнейшей категории, дро считаются отдельно.
@@ -473,67 +494,57 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
           </div>
 
           {analysis.postflopReady ? (
-            <div className="combo-table-stack">
-              <div className="table-wrap">
-                <table>
-                  <caption>Готовые руки в текущем диапазоне.</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Категория</th>
-                      <th scope="col">Комбо</th>
-                      <th scope="col">Доля</th>
-                      <th scope="col">Примеры</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analysis.madeHandSummaries.length > 0 ? (
-                      analysis.madeHandSummaries.map((summary) => (
-                        <tr key={summary.category}>
-                          <td>{getMadeHandLabel(summary.category)}</td>
-                          <td>{formatInteger(summary.count)}</td>
-                          <td>{formatShare(summary.share, displayMode, 12)}</td>
-                          <td>{summary.examples.map(formatCombo).join(', ')}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={4}>Выбранный диапазон пуст, поэтому и категорий пока нет.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+            <div className="combo-breakdown">
+              <div className="combo-breakdown-group">
+                <h3 className="combo-breakdown-title">Готовые руки</h3>
+                {analysis.madeHandSummaries.length > 0 ? (
+                  <ul className="combo-breakdown-list">
+                    {analysis.madeHandSummaries.map((summary) => (
+                      <li className="combo-breakdown-row" key={summary.category}>
+                        <div className="combo-breakdown-header">
+                          <span className="combo-breakdown-name">
+                            {getMadeHandLabel(summary.category)}
+                          </span>
+                          <span className="combo-breakdown-stats">
+                            <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
+                            {formatShare(summary.share, displayMode, 12)}
+                          </span>
+                        </div>
+                        <ComboExamples examples={summary.examples} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="combo-breakdown-empty">
+                    Диапазон пуст — готовых рук пока нет.
+                  </p>
+                )}
               </div>
 
-              <div className="table-wrap">
-                <table>
-                  <caption>Дро в текущем диапазоне.</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Дро</th>
-                      <th scope="col">Комбо</th>
-                      <th scope="col">Доля</th>
-                      <th scope="col">Примеры</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analysis.drawSummaries.length > 0 ? (
-                      analysis.drawSummaries.map((summary) => (
-                        <tr key={summary.category}>
-                          <td>{getDrawLabel(summary.category)}</td>
-                          <td>{formatInteger(summary.count)}</td>
-                          <td>{formatShare(summary.share, displayMode, 12)}</td>
-                          <td>{summary.examples.map(formatCombo).join(', ')}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={4}>
-                          На этом борде дро нет, либо разбор борда ещё не включён.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              <div className="combo-breakdown-group">
+                <h3 className="combo-breakdown-title">Дро</h3>
+                {analysis.drawSummaries.length > 0 ? (
+                  <ul className="combo-breakdown-list">
+                    {analysis.drawSummaries.map((summary) => (
+                      <li className="combo-breakdown-row" key={summary.category}>
+                        <div className="combo-breakdown-header">
+                          <span className="combo-breakdown-name">
+                            {getDrawLabel(summary.category)}
+                          </span>
+                          <span className="combo-breakdown-stats">
+                            <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
+                            {formatShare(summary.share, displayMode, 12)}
+                          </span>
+                        </div>
+                        <ComboExamples examples={summary.examples} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="combo-breakdown-empty">
+                    На этом борде дро нет.
+                  </p>
+                )}
               </div>
             </div>
           ) : (

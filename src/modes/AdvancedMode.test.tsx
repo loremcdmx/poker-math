@@ -19,7 +19,7 @@ describe('AdvancedMode', () => {
     await user.click(screen.getByRole('button', { name: 'K♦' }))
     await user.click(screen.getByRole('button', { name: '7♣' }))
 
-    expect(screen.getByText('Готовые руки в текущем диапазоне.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Готовые руки' })).toBeInTheDocument()
   })
 
   it('picks cards via the grid and tolerates re-clicks to remove them', async () => {
