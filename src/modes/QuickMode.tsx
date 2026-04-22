@@ -116,10 +116,10 @@ export function QuickMode({
               inputMax={300}
               inputMin={1}
               label="Ставка, % банка"
-              onValueChange={onBetPercentChange}
+              onValueChange={(value) => onBetPercentChange(Math.round(value))}
               sanitizeMax={300}
               sanitizeMin={1}
-              step={0.1}
+              step={1}
               value={betPercent}
             />
           </div>
@@ -130,8 +130,8 @@ export function QuickMode({
               className="bet-slider"
               max={300}
               min={1}
-              onChange={(event) => onBetPercentChange(Number(event.target.value))}
-              step={0.1}
+              onChange={(event) => onBetPercentChange(Math.round(Number(event.target.value)))}
+              step={1}
               type="range"
               value={betPercent}
             />

@@ -53,7 +53,7 @@ describe('QuickMode', () => {
     expect(input).toHaveValue('100')
   })
 
-  it('keeps slider aligned when bet input uses decimal values', () => {
+  it('rounds fractional bet input to an integer and locks the slider to it', () => {
     function QuickModeHarness() {
       const [betPercent, setBetPercent] = useState(50)
 
@@ -74,6 +74,6 @@ describe('QuickMode', () => {
     fireEvent.focus(input)
     fireEvent.change(input, { target: { value: '140.5' } })
 
-    expect(slider.value).toBe('140.5')
+    expect(slider.value).toBe('141')
   })
 })
