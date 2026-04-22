@@ -559,11 +559,35 @@
   margin-top: 26px;
 }
 
+.slider-track-wrap {
+  position: relative;
+}
+
 .bet-slider {
   width: 100%;
   margin: 0;
   appearance: none;
   background: transparent;
+  position: relative;
+  z-index: 2;
+}
+
+.slider-ticks {
+  position: absolute;
+  inset: 50% 0 auto 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.slider-tick {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 8px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: rgba(24, 92, 76, 0.24);
 }
 
 .bet-slider::-webkit-slider-runnable-track {
@@ -601,12 +625,27 @@
 }
 
 .slider-scale {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  position: relative;
+  height: 1.4em;
   margin-top: 10px;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   color: rgba(52, 35, 22, 0.58);
+}
+
+.slider-scale-mark {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.slider-scale-mark:first-child {
+  transform: translateX(0);
+}
+
+.slider-scale-mark:last-child {
+  transform: translateX(-100%);
 }
 
 .preset-grid,

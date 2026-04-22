@@ -29,6 +29,14 @@ const quickHeroActions = [
 
 const RATIO_ERROR_THRESHOLD_PERCENT = 0.5
 
+const BET_SLIDER_MIN = 1
+const BET_SLIDER_MAX = 300
+const BET_SLIDER_TICKS = [1, 25, 50, 75, 100, 150, 200, 300] as const
+
+function sliderPositionPercent(value: number) {
+  return ((value - BET_SLIDER_MIN) / (BET_SLIDER_MAX - BET_SLIDER_MIN)) * 100
+}
+
 export function QuickMode({
   betPercent,
   displayMode,
@@ -125,22 +133,39 @@ export function QuickMode({
           </div>
 
           <div className="slider-block">
-            <input
-              aria-label="Bet size slider"
-              className="bet-slider"
-              max={300}
-              min={1}
-              onChange={(event) => onBetPercentChange(Math.round(Number(event.target.value)))}
-              step={1}
-              type="range"
-              value={betPercent}
-            />
+            <div className="slider-track-wrap">
+              <input
+                aria-label="Bet size slider"
+                className="bet-slider"
+                max={BET_SLIDER_MAX}
+                min={BET_SLIDER_MIN}
+                onChange={(event) =>
+                  onBetPercentChange(Math.round(Number(event.target.value)))
+                }
+                step={1}
+                type="range"
+                value={betPercent}
+              />
+              <div className="slider-ticks" aria-hidden="true">
+                {BET_SLIDER_TICKS.map((tick) => (
+                  <span
+                    className="slider-tick"
+                    key={tick}
+                    style={{ left: `${sliderPositionPercent(tick)}%` }}
+                  />
+                ))}
+              </div>
+            </div>
             <div className="slider-scale" aria-hidden="true">
-              <span>1%</span>
-              <span>50%</span>
-              <span>100%</span>
-              <span>200%</span>
-              <span>300%</span>
+              {BET_SLIDER_TICKS.map((tick) => (
+                <span
+                  className="slider-scale-mark"
+                  key={tick}
+                  style={{ left: `${sliderPositionPercent(tick)}%` }}
+                >
+                  {tick}%
+                </span>
+              ))}
             </div>
           </div>
 
