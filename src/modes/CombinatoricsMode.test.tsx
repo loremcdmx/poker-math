@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { AdvancedMode } from './AdvancedMode'
+import { CombinatoricsMode } from './CombinatoricsMode'
 
-describe('AdvancedMode', () => {
+describe('CombinatoricsMode', () => {
   it('lets the user apply presets and enables postflop analysis once a flop is set', async () => {
     const user = userEvent.setup()
 
-    render(<AdvancedMode displayMode="percent" />)
+    render(<CombinatoricsMode displayMode="percent" />)
 
     await user.click(screen.getByRole('button', { name: 'Очистить' }))
     expect(screen.getByText(/0 классов/)).toBeInTheDocument()
@@ -25,7 +25,7 @@ describe('AdvancedMode', () => {
   it('picks cards via the grid and tolerates re-clicks to remove them', async () => {
     const user = userEvent.setup()
 
-    render(<AdvancedMode displayMode="percent" />)
+    render(<CombinatoricsMode displayMode="percent" />)
 
     const aceHearts = screen.getByRole('button', { name: 'A♥' })
     await user.click(aceHearts)

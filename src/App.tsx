@@ -1,13 +1,14 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import './App.css'
 import { AdvancedMode } from './modes/AdvancedMode'
+import { CombinatoricsMode } from './modes/CombinatoricsMode'
 import { IgorMode } from './modes/IgorMode'
 import { QuickMode } from './modes/QuickMode'
 import type { DisplayMode } from './lib/pokerMath'
 
-type AppMode = 'quick' | 'igor' | 'advanced'
+type AppMode = 'quick' | 'combinatorics' | 'igor' | 'advanced'
 
-const BASE_APP_MODES: AppMode[] = ['quick', 'igor']
+const BASE_APP_MODES: AppMode[] = ['quick', 'combinatorics', 'igor']
 
 function App() {
   const [appMode, setAppMode] = useState<AppMode>('quick')
@@ -19,6 +20,7 @@ function App() {
   const [advancedPasswordError, setAdvancedPasswordError] = useState('')
   const tabRefs = useRef<Record<AppMode, HTMLButtonElement | null>>({
     advanced: null,
+    combinatorics: null,
     igor: null,
     quick: null,
   })
@@ -81,7 +83,25 @@ function App() {
             tabIndex={appMode === 'quick' ? 0 : -1}
             type="button"
           >
-            Быстрый калькулятор
+            Базовые формулы шансов
+          </button>
+          <button
+            aria-controls="combinatorics-panel"
+            aria-selected={appMode === 'combinatorics'}
+            className={
+              appMode === 'combinatorics' ? 'mode-switch-item active' : 'mode-switch-item'
+            }
+            id="combinatorics-tab"
+            onClick={() => setAppMode('combinatorics')}
+            onKeyDown={(event) => handleModeTabKeyDown(event, 'combinatorics')}
+            ref={(node) => {
+              tabRefs.current.combinatorics = node
+            }}
+            role="tab"
+            tabIndex={appMode === 'combinatorics' ? 0 : -1}
+            type="button"
+          >
+            Комбинаторика
           </button>
           <button
             aria-controls="igor-panel"
@@ -166,6 +186,15 @@ function App() {
             displayMode={displayMode}
             onBetPercentChange={setBetPercent}
           />
+        </section>
+      ) : appMode === 'combinatorics' ? (
+        <section
+          aria-labelledby="combinatorics-tab"
+          id="combinatorics-panel"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          <CombinatoricsMode displayMode={displayMode} />
         </section>
       ) : appMode === 'igor' ? (
         <section aria-labelledby="igor-tab" id="igor-panel" role="tabpanel" tabIndex={0}>

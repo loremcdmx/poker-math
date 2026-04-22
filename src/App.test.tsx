@@ -13,6 +13,10 @@ describe('App', () => {
 
     expect(screen.getAllByText('1/2 банка').length).toBeGreaterThan(0)
 
+    await user.click(screen.getByRole('tab', { name: 'Комбинаторика' }))
+
+    expect(screen.getByText(/Текущий диапазон/i)).toBeInTheDocument()
+
     await user.click(screen.getByRole('tab', { name: 'Режим Игоря' }))
 
     expect(screen.getAllByText('4/5 банка').length).toBeGreaterThan(0)
@@ -27,10 +31,6 @@ describe('App', () => {
     await user.type(screen.getByLabelText('Пароль адвансд мода'), '123')
     await user.click(screen.getByRole('button', { name: 'Открыть адвансд' }))
 
-    expect(screen.getByText(/Доля живых/i)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Эквити' }))
-
     expect(screen.getByText(/Hero equity/i)).toBeInTheDocument()
   })
 
@@ -39,14 +39,14 @@ describe('App', () => {
 
     render(<App />)
 
-    const quickTab = screen.getByRole('tab', { name: 'Быстрый калькулятор' })
+    const quickTab = screen.getByRole('tab', { name: 'Базовые формулы шансов' })
     quickTab.focus()
 
     await user.keyboard('{ArrowRight}')
 
-    const igorTab = screen.getByRole('tab', { name: 'Режим Игоря' })
-    expect(igorTab).toHaveFocus()
-    expect(igorTab).toHaveAttribute('aria-selected', 'true')
+    const comboTab = screen.getByRole('tab', { name: 'Комбинаторика' })
+    expect(comboTab).toHaveFocus()
+    expect(comboTab).toHaveAttribute('aria-selected', 'true')
 
     await user.keyboard('{ArrowLeft}')
 
