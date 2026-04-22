@@ -1,17 +1,21 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { HeroActionChips } from '../components/HeroActionChips'
-import { formatInteger, formatShare } from '../lib/formatters'
+import { formatDecimal, formatInteger, formatShare } from '../lib/formatters'
 import {
   analyzeRange,
   cardSuits,
+  getPresetRangeWeights,
+  getRangeCellWeight,
   getDrawLabel,
   getMadeHandLabel,
-  getPresetRangeCells,
   getRangeGrid,
+  listSelectedRangeCells,
   rangeRanks,
   type CardCode,
   type CardSuit,
+  type RangeSelectionWeights,
 } from '../lib/combinatorics'
+import { useLocalStorageState } from '../lib/storage'
 import type { DisplayMode } from '../lib/pokerMath'
 import { EquityMode } from './EquityMode'
 
@@ -31,8 +35,19 @@ const suitLabelMap: Record<CardSuit, string> = {
 
 const boardLabels = ['Флоп 1', 'Флоп 2', 'Флоп 3', 'Тёрн', 'Ривер'] as const
 const rangeGrid = getRangeGrid()
+const rangeGridCells = rangeGrid.flat()
+const rangeCellKinds = new Map(rangeGridCells.map((cell) => [cell.label, cell.kind]))
+const rangeWeightSteps = [0.25, 0.5, 0.75, 1] as const
 
-type DragMode = 'add' | 'remove' | null
+type DragMode =
+  | {
+      kind: 'remove'
+    }
+  | {
+      kind: 'set'
+      weight: number
+    }
+  | null
 
 const presetButtons = [
   { label: 'Очистить', preset: 'clear' as const },
@@ -51,8 +66,32 @@ function formatCard(card: CardCode) {
   return `${card[0]}${suitGlyphMap[card[1] as keyof typeof suitGlyphMap]}`
 }
 
+function getBoardStageLabel(boardCount: number) {
+  if (boardCount >= 5) {
+    return 'Ривер'
+  }
+
+  if (boardCount === 4) {
+    return 'Тёрн'
+  }
+
+  if (boardCount === 3) {
+    return 'Флоп'
+  }
+
+  if (boardCount > 0) {
+    return 'Префлоп + блокеры'
+  }
+
+  return 'Префлоп'
+}
+
 function getCardTone(card: CardCode) {
   return card[1] === 'h' || card[1] === 'd' ? 'red' : 'dark'
+}
+
+function formatWeightLabel(weight: number) {
+  return `${Math.round(weight * 100)}%`
 }
 
 function ComboCard({ card }: { card: CardCode }) {
@@ -91,28 +130,67 @@ type AdvancedModeProps = {
 
 export function AdvancedMode({ displayMode }: AdvancedModeProps) {
   const [advancedSection, setAdvancedSection] = useState<'combos' | 'equity'>('combos')
-  const [selectedCells, setSelectedCells] = useState<Set<string>>(
-    () => new Set(getPresetRangeCells('broadways')),
+  const [selectedRange, setSelectedRange] = useLocalStorageState<RangeSelectionWeights>(
+    'pokermath.advanced.range',
+    () => getPresetRangeWeights('broadways'),
   )
-  const [boardCards, setBoardCards] = useState<Array<CardCode | ''>>(['', '', '', '', ''])
+  const [boardCards, setBoardCards] = useLocalStorageState<Array<CardCode | ''>>(
+    'pokermath.advanced.board',
+    ['', '', '', '', ''],
+  )
+  const [activeWeight, setActiveWeight] = useLocalStorageState<number>(
+    'pokermath.advanced.weight-brush',
+    1,
+  )
   const dragModeRef = useRef<DragMode>(null)
   const [isDragging, setIsDragging] = useState(false)
 
-  const selectedCellLabels = useMemo(() => Array.from(selectedCells), [selectedCells])
+  const selectedCellLabels = useMemo(() => listSelectedRangeCells(selectedRange), [selectedRange])
   const analysis = useMemo(
-    () => analyzeRange(selectedCellLabels, boardCards),
-    [boardCards, selectedCellLabels],
+    () => analyzeRange(selectedRange, boardCards),
+    [boardCards, selectedRange],
+  )
+  const selectedKindCounts = useMemo(() => {
+    const counts = {
+      offsuit: 0,
+      pair: 0,
+      suited: 0,
+    }
+
+    for (const label of selectedCellLabels) {
+      const kind = rangeCellKinds.get(label)
+
+      if (kind !== undefined) {
+        counts[kind] += 1
+      }
+    }
+
+    return counts
+  }, [selectedCellLabels])
+  const selectedPreview = useMemo(
+    () => selectedCellLabels.slice().sort((left, right) => left.localeCompare(right)).slice(0, 12),
+    [selectedCellLabels],
+  )
+  const selectedWeightTotal = useMemo(
+    () =>
+      selectedCellLabels.reduce(
+        (total, label) => total + getRangeCellWeight(selectedRange, label),
+        0,
+      ),
+    [selectedCellLabels, selectedRange],
   )
   const boardSummary =
     analysis.board.length === 0 ? 'борд пока пустой' : analysis.board.map(formatCard).join(' ')
   const boardCardSet = new Set(analysis.board)
   const firstEmptyBoardSlot = boardCards.indexOf('')
+  const boardStageLabel = getBoardStageLabel(analysis.board.length)
   const advancedHeroActions =
     advancedSection === 'combos'
       ? [
           { href: '#advanced-guide', label: 'Шпаргалка' },
           { href: '#advanced-grid', label: 'Матрица' },
           { href: '#advanced-board', label: 'Борд' },
+          { href: '#advanced-texture', label: 'Texture' },
           { href: '#advanced-categories', label: 'Категории' },
         ]
       : [
@@ -141,33 +219,40 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
   }, [isDragging])
 
   function applyCellMode(label: string, mode: Exclude<DragMode, null>) {
-    setSelectedCells((currentSelection) => {
-      const alreadySelected = currentSelection.has(label)
+    setSelectedRange((currentSelection) => {
+      const currentWeight = currentSelection[label] ?? 0
 
-      if (mode === 'add' && alreadySelected) {
+      if (mode.kind === 'remove') {
+        if (currentWeight === 0) {
+          return currentSelection
+        }
+
+        const nextSelection = { ...currentSelection }
+        delete nextSelection[label]
+        return nextSelection
+      }
+
+      if (currentWeight === mode.weight) {
         return currentSelection
       }
 
-      if (mode === 'remove' && !alreadySelected) {
-        return currentSelection
+      return {
+        ...currentSelection,
+        [label]: mode.weight,
       }
-
-      const nextSelection = new Set(currentSelection)
-
-      if (mode === 'add') {
-        nextSelection.add(label)
-      } else {
-        nextSelection.delete(label)
-      }
-
-      return nextSelection
     })
   }
 
   function handleCellPointerDown(event: ReactPointerEvent<HTMLButtonElement>, label: string) {
     event.preventDefault()
-    const isSelected = selectedCells.has(label)
-    const mode: Exclude<DragMode, null> = isSelected ? 'remove' : 'add'
+    const currentWeight = getRangeCellWeight(selectedRange, label)
+    const mode: Exclude<DragMode, null> =
+      currentWeight === activeWeight
+        ? { kind: 'remove' }
+        : {
+            kind: 'set',
+            weight: activeWeight,
+          }
     dragModeRef.current = mode
     setIsDragging(true)
     applyCellMode(label, mode)
@@ -184,7 +269,7 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
   }
 
   function applyPreset(preset: (typeof presetButtons)[number]['preset']) {
-    setSelectedCells(new Set(getPresetRangeCells(preset)))
+    setSelectedRange(getPresetRangeWeights(preset))
   }
 
   function toggleBoardCard(card: CardCode) {
@@ -252,21 +337,21 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
               <p className="focus-label">Текущий диапазон</p>
               <p className="focus-size">
                 {formatInteger(analysis.selectedCellCount)} классов /{' '}
-                {formatInteger(analysis.rawComboCount)} комбо
+                {formatDecimal(analysis.weightedRawComboCount)} комбо
               </p>
               <p className="focus-subtitle">
                 На борде сейчас <strong>{boardSummary}</strong>, поэтому живыми остаются{' '}
-                <strong>{formatInteger(analysis.liveComboCount)}</strong> комбо, а{' '}
-                <strong>{formatInteger(analysis.blockedComboCount)}</strong> уже умерли от блокеров.
+                <strong>{formatDecimal(analysis.weightedLiveComboCount)}</strong> комбо, а{' '}
+                <strong>{formatDecimal(analysis.weightedBlockedComboCount)}</strong> уже умерли от блокеров.
               </p>
               <div className="focus-metrics">
                 <div>
-                  <span>Сырые префлоп-комбо</span>
-                  <strong>{formatInteger(analysis.rawComboCount)}</strong>
+                  <span>Эффективно выбрано</span>
+                  <strong>{formatDecimal(selectedWeightTotal)} классов</strong>
                 </div>
                 <div>
                   <span>Живые комбо</span>
-                  <strong>{formatInteger(analysis.liveComboCount)}</strong>
+                  <strong>{formatDecimal(analysis.weightedLiveComboCount)}</strong>
                 </div>
                 <div>
                   <span>Постфлоп-анализ</span>
@@ -302,23 +387,31 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
       </header>
 
       <section className="surface advanced-switch-panel">
-        <div className="inventory-switch" role="group" aria-label="Advanced section mode">
-          <button
-            aria-pressed={advancedSection === 'combos'}
-            className={advancedSection === 'combos' ? 'mode-chip active' : 'mode-chip'}
-            onClick={() => setAdvancedSection('combos')}
-            type="button"
-          >
-            Комбинаторика
-          </button>
-          <button
-            aria-pressed={advancedSection === 'equity'}
-            className={advancedSection === 'equity' ? 'mode-chip active' : 'mode-chip'}
-            onClick={() => setAdvancedSection('equity')}
-            type="button"
-          >
-            Эквити
-          </button>
+        <div className="advanced-switch-layout">
+          <div className="inventory-switch" role="group" aria-label="Advanced section mode">
+            <button
+              aria-pressed={advancedSection === 'combos'}
+              className={advancedSection === 'combos' ? 'mode-chip active' : 'mode-chip'}
+              onClick={() => setAdvancedSection('combos')}
+              type="button"
+            >
+              Комбинаторика
+            </button>
+            <button
+              aria-pressed={advancedSection === 'equity'}
+              className={advancedSection === 'equity' ? 'mode-chip active' : 'mode-chip'}
+              onClick={() => setAdvancedSection('equity')}
+              type="button"
+            >
+              Эквити
+            </button>
+          </div>
+
+          <p className="advanced-switch-note">
+            {advancedSection === 'combos'
+              ? 'Сначала сужай диапазон и смотри, какие комбо вообще доживают до борда. Потом уже переходи в эквити.'
+              : 'Здесь уже showdown-математика: те же руки и блокеры, но теперь вопрос не “что доехало”, а “кто сколько выигрывает”.'}
+          </p>
         </div>
       </section>
 
@@ -386,6 +479,38 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
               </p>
             </div>
 
+            <div className="advanced-meta-strip" aria-label="Сводка диапазона">
+              <div className="advanced-meta-pill">
+                <span>Стадия</span>
+                <strong>{boardStageLabel}</strong>
+              </div>
+              <div className="advanced-meta-pill">
+                <span>Пары</span>
+                <strong>{formatInteger(selectedKindCounts.pair)}</strong>
+              </div>
+              <div className="advanced-meta-pill">
+                <span>Suited</span>
+                <strong>{formatInteger(selectedKindCounts.suited)}</strong>
+              </div>
+              <div className="advanced-meta-pill">
+                <span>Offsuit</span>
+                <strong>{formatInteger(selectedKindCounts.offsuit)}</strong>
+              </div>
+            </div>
+
+            <div className="combo-presets" role="group" aria-label="Range weight brush">
+              {rangeWeightSteps.map((weight) => (
+                <button
+                  className={activeWeight === weight ? 'mode-chip active' : 'mode-chip'}
+                  key={weight}
+                  onClick={() => setActiveWeight(weight)}
+                  type="button"
+                >
+                  Кисть {formatWeightLabel(weight)}
+                </button>
+              ))}
+            </div>
+
             <div className="combo-presets" role="group" aria-label="Range presets">
               {presetButtons.map((preset) => (
                 <button
@@ -416,7 +541,8 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
                   <Fragment key={`row-${rangeRanks[rowIndex]}`}>
                     <div className="range-axis">{rangeRanks[rowIndex]}</div>
                     {row.map((cell) => {
-                      const selected = selectedCells.has(cell.label)
+                      const weight = getRangeCellWeight(selectedRange, cell.label)
+                      const selected = weight > 0
 
                       return (
                         <button
@@ -429,13 +555,24 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
                               return
                             }
 
-                            applyCellMode(cell.label, selected ? 'remove' : 'add')
+                            applyCellMode(
+                              cell.label,
+                              weight === activeWeight
+                                ? { kind: 'remove' }
+                                : {
+                                    kind: 'set',
+                                    weight: activeWeight,
+                                  },
+                            )
                           }}
                           onPointerDown={(event) => handleCellPointerDown(event, cell.label)}
                           onPointerEnter={() => handleCellPointerEnter(cell.label)}
                           type="button"
                         >
-                          {cell.label}
+                          <span>{cell.label}</span>
+                          {selected ? (
+                            <small className="range-cell-weight">{formatWeightLabel(weight)}</small>
+                          ) : null}
                         </button>
                       )
                     })}
@@ -449,9 +586,28 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
 
             <p className="footnote">
               Сейчас выбрано <strong>{formatInteger(analysis.selectedCellCount)}</strong> классов,
-              что даёт <strong>{formatInteger(analysis.rawComboCount)}</strong> сырых
+              что даёт <strong>{formatDecimal(analysis.weightedRawComboCount)}</strong> эффективных
               префлоп-комбо до учёта борда.
             </p>
+
+            <div className="range-selection-preview" aria-label="Превью выбранных классов">
+              {selectedPreview.length > 0 ? (
+                <>
+                  {selectedPreview.map((label) => (
+                    <span className="range-selection-chip" key={label}>
+                      {label} · {formatWeightLabel(getRangeCellWeight(selectedRange, label))}
+                    </span>
+                  ))}
+                  {selectedCellLabels.length > selectedPreview.length ? (
+                    <span className="range-selection-more">
+                      +{selectedCellLabels.length - selectedPreview.length}
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="range-selection-empty">Диапазон пуст — выбери пресет или кликай по матрице.</span>
+              )}
+            </div>
           </section>
 
           <section className="advanced-layout">
@@ -552,19 +708,19 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
               <div className="summary-grid compact-summary">
                 <article className="result-card primary">
                   <p className="card-label">Живые комбо</p>
-                  <h3>{formatInteger(analysis.liveComboCount)}</h3>
+                  <h3>{formatDecimal(analysis.weightedLiveComboCount)}</h3>
                   <p>Что реально осталось в диапазоне после вычитания видимых карт борда.</p>
                 </article>
                 <article className="result-card">
                   <p className="card-label">Умерло от блокеров</p>
-                  <h3>{formatInteger(analysis.blockedComboCount)}</h3>
+                  <h3>{formatDecimal(analysis.weightedBlockedComboCount)}</h3>
                   <p>Разница между сырыми префлоп-комбо и тем, что пережило раздачу карт.</p>
                 </article>
                 <article className="result-card">
                   <p className="card-label">Доля живых</p>
                   <h3>
                     {formatShare(
-                      analysis.liveComboCount / Math.max(1, analysis.rawComboCount),
+                      analysis.weightedLiveComboCount / Math.max(0.0001, analysis.weightedRawComboCount),
                       displayMode,
                     )}
                   </h3>
@@ -573,79 +729,140 @@ export function AdvancedMode({ displayMode }: AdvancedModeProps) {
               </div>
             </section>
 
-            <section className="surface jump-target" id="advanced-categories">
-              <div className="section-head compact">
-                <div>
-                  <p className="kicker">Наполнение диапазона</p>
-                  <h2>Готовые руки и дро в текущем рейндже</h2>
-                </div>
-                <p className="table-note">
-                  Готовые руки разнесены по сильнейшей категории, дро считаются отдельно. Готовые
-                  суммируются без пересечений, дро — могут пересекаться.
-                </p>
+          <section className="surface jump-target" id="advanced-texture">
+            <div className="section-head compact">
+              <div>
+                <p className="kicker">Texture explorer</p>
+                <h2>Как диапазон цепляется за этот борд</h2>
               </div>
+              <p className="table-note">
+                Здесь не просто названия борда, а короткая карта взаимодействия: сколько диапазона
+                уже попало, сколько держится на дро и сколько осталось воздухом.
+              </p>
+            </div>
 
-              {analysis.postflopReady ? (
-                <div className="combo-breakdown">
-                  <div className="combo-breakdown-group">
-                    <h3 className="combo-breakdown-title">Готовые руки</h3>
-                    {analysis.madeHandSummaries.length > 0 ? (
-                      <ul className="combo-breakdown-list">
-                        {analysis.madeHandSummaries.map((summary) => (
-                          <li className="combo-breakdown-row" key={summary.category}>
-                            <div className="combo-breakdown-header">
-                              <span className="combo-breakdown-name">
-                                {getMadeHandLabel(summary.category)}
-                              </span>
-                              <span className="combo-breakdown-stats">
-                                <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
-                                {formatShare(summary.share, displayMode, 12)}
-                              </span>
-                            </div>
-                            <ComboExamples examples={summary.examples} />
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="combo-breakdown-empty">Диапазон пуст — готовых рук пока нет.</p>
-                    )}
-                  </div>
-
-                  <div className="combo-breakdown-group">
-                    <h3 className="combo-breakdown-title">Дро</h3>
-                    {analysis.drawSummaries.length > 0 ? (
-                      <ul className="combo-breakdown-list">
-                        {analysis.drawSummaries.map((summary) => (
-                          <li className="combo-breakdown-row" key={summary.category}>
-                            <div className="combo-breakdown-header">
-                              <span className="combo-breakdown-name">
-                                {getDrawLabel(summary.category)}
-                              </span>
-                              <span className="combo-breakdown-stats">
-                                <strong>{formatInteger(summary.count)}</strong> комбо ·{' '}
-                                {formatShare(summary.share, displayMode, 12)}
-                              </span>
-                            </div>
-                            <ComboExamples examples={summary.examples} />
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="combo-breakdown-empty">На этом борде дро нет.</p>
-                    )}
-                  </div>
+            {analysis.boardTexture ? (
+              <>
+                <div className="texture-tag-grid">
+                  {analysis.boardTexture.tags.map((tag) => (
+                    <article className="advanced-meta-pill" key={tag.label}>
+                      <span>{tag.label}</span>
+                      <strong>{tag.description}</strong>
+                    </article>
+                  ))}
                 </div>
-              ) : (
-                <article className="result-card">
-                  <p className="card-label">Ждём флоп</p>
-                  <h3>Нужен флоп</h3>
-                  <p>
-                    Категории готовых рук и дро включатся, как только выложишь три карты флопа.
-                    До этого матрица честно показывает только префлопные комбо и эффект блокеров.
-                  </p>
-                </article>
-              )}
-            </section>
+
+                <div className="summary-grid compact-summary">
+                  <article className="result-card primary">
+                    <p className="card-label">Pair+ в диапазоне</p>
+                    <h3>{formatShare(analysis.boardTexture.pairPlusShare, displayMode)}</h3>
+                    <p>Любая готовая пара или лучше против текущего борда.</p>
+                  </article>
+                  <article className="result-card">
+                    <p className="card-label">Top pair+ / overpair</p>
+                    <h3>{formatShare(analysis.boardTexture.topPairPlusShare, displayMode)}</h3>
+                    <p>То, что уже может продолжать агрессивнее среднего.</p>
+                  </article>
+                  <article className="result-card">
+                    <p className="card-label">Сильные готовые</p>
+                    <h3>{formatShare(analysis.boardTexture.strongMadeHandShare, displayMode)}</h3>
+                    <p>Two pair+ и всё, что стоит выше по made-hand лестнице.</p>
+                  </article>
+                  <article className="result-card">
+                    <p className="card-label">Дро / воздух</p>
+                    <h3>
+                      {formatShare(analysis.boardTexture.drawShare, displayMode)} /{' '}
+                      {formatShare(analysis.boardTexture.airShare, displayMode)}
+                    </h3>
+                    <p>Сколько диапазона живёт на equity, а сколько почти не зацепилось.</p>
+                  </article>
+                </div>
+              </>
+            ) : (
+              <article className="result-card">
+                <p className="card-label">Ждём флоп</p>
+                <h3>Нужны 3 карты</h3>
+                <p>
+                  Texture explorer включается после флопа, когда уже можно честно отделять made
+                  hand от draw и воздуха.
+                </p>
+              </article>
+            )}
+          </section>
+
+          <section className="surface jump-target" id="advanced-categories">
+            <div className="section-head compact">
+              <div>
+                <p className="kicker">Наполнение диапазона</p>
+                <h2>Готовые руки и дро в текущем рейндже</h2>
+              </div>
+              <p className="table-note">
+                Готовые руки разнесены по сильнейшей категории, дро считаются отдельно. Готовые
+                суммируются без пересечений, дро — могут пересекаться.
+              </p>
+            </div>
+
+            {analysis.postflopReady ? (
+              <div className="combo-breakdown">
+                <div className="combo-breakdown-group">
+                  <h3 className="combo-breakdown-title">Готовые руки</h3>
+                  {analysis.madeHandSummaries.length > 0 ? (
+                    <ul className="combo-breakdown-list">
+                      {analysis.madeHandSummaries.map((summary) => (
+                        <li className="combo-breakdown-row" key={summary.category}>
+                          <div className="combo-breakdown-header">
+                            <span className="combo-breakdown-name">
+                              {getMadeHandLabel(summary.category)}
+                            </span>
+                            <span className="combo-breakdown-stats">
+                              <strong>{formatDecimal(summary.count)}</strong> комбо ·{' '}
+                              {formatShare(summary.share, displayMode, 12)}
+                            </span>
+                          </div>
+                          <ComboExamples examples={summary.examples} />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="combo-breakdown-empty">Диапазон пуст — готовых рук пока нет.</p>
+                  )}
+                </div>
+
+                <div className="combo-breakdown-group">
+                  <h3 className="combo-breakdown-title">Дро</h3>
+                  {analysis.drawSummaries.length > 0 ? (
+                    <ul className="combo-breakdown-list">
+                      {analysis.drawSummaries.map((summary) => (
+                        <li className="combo-breakdown-row" key={summary.category}>
+                          <div className="combo-breakdown-header">
+                            <span className="combo-breakdown-name">
+                              {getDrawLabel(summary.category)}
+                            </span>
+                            <span className="combo-breakdown-stats">
+                              <strong>{formatDecimal(summary.count)}</strong> комбо ·{' '}
+                              {formatShare(summary.share, displayMode, 12)}
+                            </span>
+                          </div>
+                          <ComboExamples examples={summary.examples} />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="combo-breakdown-empty">На этом борде дро нет.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <article className="result-card">
+                <p className="card-label">Ждём флоп</p>
+                <h3>Нужен флоп</h3>
+                <p>
+                  Категории готовых рук и дро включатся, как только выложишь три карты флопа.
+                  До этого матрица честно показывает только префлопные комбо и эффект блокеров.
+                </p>
+              </article>
+            )}
+          </section>
           </section>
         </>
       )}

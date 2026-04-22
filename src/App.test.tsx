@@ -16,22 +16,8 @@ describe('App', () => {
     await user.click(screen.getByRole('tab', { name: 'Режим Игоря' }))
 
     expect(screen.getAllByText('4/5 банка').length).toBeGreaterThan(0)
-
     expect(screen.queryByRole('tab', { name: 'Адвансд мод' })).toBeNull()
-
-    await user.click(screen.getByRole('button', { name: 'Advanced mode' }))
-    await user.click(screen.getByRole('tab', { name: 'Адвансд мод' }))
-
-    expect(screen.getByText(/Режим закрыт паролем/i)).toBeInTheDocument()
-
-    await user.type(screen.getByLabelText('Пароль адвансд мода'), '123')
-    await user.click(screen.getByRole('button', { name: 'Открыть адвансд' }))
-
-    expect(screen.getByText(/Доля живых/i)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Эквити' }))
-
-    expect(screen.getByText(/Hero equity/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Advanced mode' })).toBeNull()
   })
 
   it('moves focus with arrow-key tab navigation', async () => {

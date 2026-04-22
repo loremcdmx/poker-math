@@ -39,6 +39,12 @@ export type ConcreteCombo = {
   label: string
 }
 
+export type WeightedConcreteCombo = ConcreteCombo & {
+  weight: number
+}
+
+export type RangeSelectionWeights = Record<string, number>
+
 export type CategorySummary<TCategory extends string> = {
   category: TCategory
   count: number
@@ -46,15 +52,33 @@ export type CategorySummary<TCategory extends string> = {
   share: number
 }
 
+export type BoardTextureTag = {
+  description: string
+  label: string
+}
+
+export type BoardTextureSummary = {
+  airShare: number
+  drawShare: number
+  pairPlusShare: number
+  strongMadeHandShare: number
+  tags: BoardTextureTag[]
+  topPairPlusShare: number
+}
+
 export type RangeAnalysis = {
   blockedComboCount: number
   board: CardCode[]
+  boardTexture: BoardTextureSummary | null
   drawSummaries: CategorySummary<DrawCategory>[]
   liveComboCount: number
   madeHandSummaries: CategorySummary<MadeHandCategory>[]
   postflopReady: boolean
   rawComboCount: number
   selectedCellCount: number
+  weightedBlockedComboCount: number
+  weightedLiveComboCount: number
+  weightedRawComboCount: number
 }
 
 const rankValueMap: Record<RangeRank, number> = {
@@ -273,34 +297,292 @@ function getDrawFlags(cards: CardCode[], boardLength: number) {
   }
 }
 
-function summarizeCategories<TCategory extends string, TCombo extends ConcreteCombo>(
+function clampWeight(weight: number) {
+  if (!Number.isFinite(weight)) {
+    return 0
+  }
+
+  return Math.min(1, Math.max(0, weight))
+}
+
+function sumComboWeights<TCombo extends { weight?: number }>(combos: TCombo[]) {
+  return combos.reduce((total, combo) => total + (combo.weight ?? 1), 0)
+}
+
+function getRangeSelectionEntries(selection: string[] | RangeSelectionWeights) {
+  if (Array.isArray(selection)) {
+    return selection.map((label) => [label, 1] as const)
+  }
+
+  return Object.entries(selection)
+    .map(([label, weight]) => [label, clampWeight(weight)] as const)
+    .filter(([, weight]) => weight > 0)
+}
+
+function isStrongMadeHand(category: MadeHandCategory) {
+  return (
+    category === 'straight_flush' ||
+    category === 'quads' ||
+    category === 'full_house' ||
+    category === 'flush' ||
+    category === 'straight' ||
+    category === 'trips' ||
+    category === 'two_pair'
+  )
+}
+
+function hasTopPairOrBetter(
+  combo: WeightedConcreteCombo,
+  board: CardCode[],
+  madeHand: MadeHandCategory,
+) {
+  if (madeHand !== 'pair') {
+    return madeHand !== 'high_card'
+  }
+
+  const boardTopRank = Math.max(...board.map((card) => getRankValue(card[0] as RangeRank)))
+  const heroRanks = combo.cards.map((card) => getRankValue(card[0] as RangeRank))
+  const pocketPair = heroRanks[0] === heroRanks[1]
+
+  if (pocketPair && heroRanks[0] > boardTopRank) {
+    return true
+  }
+
+  return heroRanks.some((rank) => rank === boardTopRank)
+}
+
+function describeSuitTexture(board: CardCode[]): BoardTextureTag {
+  const suitCounts = Array.from(countBy(board.map((card) => card[1] as CardSuit)).values()).sort(
+    (left, right) => right - left,
+  )
+  const highestCount = suitCounts[0] ?? 0
+
+  if (highestCount >= 4) {
+    return {
+      description: 'На борде уже четыре карты одной масти, флешевые runout-ы сильно зажаты.',
+      label: '4 к масти',
+    }
+  }
+
+  if (highestCount === 3) {
+    return {
+      description: 'Монотонный борд: флеши и флеш-дро приходят сразу.',
+      label: 'монотонный',
+    }
+  }
+
+  if (highestCount === 2) {
+    return {
+      description: 'Двухмастный борд: часть диапазона получает flush draw прямо сейчас.',
+      label: 'двухмастный',
+    }
+  }
+
+  return {
+    description: 'Радужный борд: по мастям текстура пока сухая.',
+    label: 'радужный',
+  }
+}
+
+function describePairTexture(board: CardCode[]): BoardTextureTag {
+  const rankCounts = Array.from(countBy(board.map((card) => card[0] as RangeRank)).values()).sort(
+    (left, right) => right - left,
+  )
+
+  if ((rankCounts[0] ?? 0) >= 3) {
+    return {
+      description: 'На борде уже три одинаковых ранга, диапазоны резко поляризуются по кикерам.',
+      label: 'трипс на борде',
+    }
+  }
+
+  if (rankCounts.filter((count) => count >= 2).length >= 2) {
+    return {
+      description: 'Две пары на борде: value-часть диапазона быстро уплотняется.',
+      label: 'двойной спаренный',
+    }
+  }
+
+  if ((rankCounts[0] ?? 0) === 2) {
+    return {
+      description: 'Спаренный борд усиливает trips/full house-ветки.',
+      label: 'спаренный',
+    }
+  }
+
+  return {
+    description: 'Несдвоенный борд: value чаще строится вокруг top pair, overpair и дро.',
+    label: 'неспаренный',
+  }
+}
+
+function describeConnectivity(board: CardCode[]): BoardTextureTag {
+  const values = Array.from(
+    new Set(board.map((card) => getRankValue(card[0] as RangeRank))),
+  ).sort((left, right) => left - right)
+  const span = (values[values.length - 1] ?? 0) - (values[0] ?? 0)
+
+  if (values.length >= 3 && span <= 4) {
+    return {
+      description: 'Карты стоят близко друг к другу, поэтому straight draw-ветки очень живые.',
+      label: 'связный',
+    }
+  }
+
+  if (values.length >= 3 && span <= 7) {
+    return {
+      description: 'Есть средняя связность: часть стрит-дро появляется, но не массово.',
+      label: 'полусвязный',
+    }
+  }
+
+  return {
+    description: 'Разрывов много, поэтому борд в основном играет через пары и оверпары.',
+    label: 'сухой по стритам',
+  }
+}
+
+function describeBoardHeight(board: CardCode[]): BoardTextureTag {
+  const highestRank = Math.max(...board.map((card) => getRankValue(card[0] as RangeRank)))
+
+  if (highestRank >= 14) {
+    return {
+      description: 'A-high текстура сильнее давит на capped-части диапазонов.',
+      label: 'A-high',
+    }
+  }
+
+  if (highestRank >= 12) {
+    return {
+      description: 'Бродвейный верх борда усиливает broadway-ветки и top-pair value.',
+      label: 'broadway-high',
+    }
+  }
+
+  if (highestRank <= 9) {
+    return {
+      description: 'Низкий борд чаще делит диапазоны между оверпарами, сетами и дро.',
+      label: 'low board',
+    }
+  }
+
+  return {
+    description: 'Средний борд часто даёт смесь equity и middling pair-веток.',
+    label: 'mid board',
+  }
+}
+
+function describeBoardTexture(
+  board: CardCode[],
+  combosWithHands: Array<
+    WeightedConcreteCombo & {
+      drawFlags: ReturnType<typeof getDrawFlags>
+      madeHand: MadeHandCategory
+    }
+  >,
+) {
+  const totalWeight = sumComboWeights(combosWithHands)
+
+  if (board.length < 3 || totalWeight === 0) {
+    return null
+  }
+
+  let pairPlusWeight = 0
+  let topPairPlusWeight = 0
+  let strongMadeHandWeight = 0
+  let drawWeight = 0
+  let airWeight = 0
+
+  for (const combo of combosWithHands) {
+    const comboWeight = combo.weight
+    const hasAnyDraw =
+      combo.drawFlags.combo_draw ||
+      combo.drawFlags.flush_draw ||
+      combo.drawFlags.oesd ||
+      combo.drawFlags.gutshot
+
+    if (combo.madeHand !== 'high_card') {
+      pairPlusWeight += comboWeight
+    }
+
+    if (hasTopPairOrBetter(combo, board, combo.madeHand)) {
+      topPairPlusWeight += comboWeight
+    }
+
+    if (isStrongMadeHand(combo.madeHand)) {
+      strongMadeHandWeight += comboWeight
+    }
+
+    if (hasAnyDraw) {
+      drawWeight += comboWeight
+    }
+
+    if (combo.madeHand === 'high_card' && !hasAnyDraw) {
+      airWeight += comboWeight
+    }
+  }
+
+  return {
+    airShare: airWeight / totalWeight,
+    drawShare: drawWeight / totalWeight,
+    pairPlusShare: pairPlusWeight / totalWeight,
+    strongMadeHandShare: strongMadeHandWeight / totalWeight,
+    tags: [
+      describeBoardHeight(board),
+      describeSuitTexture(board),
+      describePairTexture(board),
+      describeConnectivity(board),
+    ],
+    topPairPlusShare: topPairPlusWeight / totalWeight,
+  } satisfies BoardTextureSummary
+}
+
+function summarizeCategories<
+  TCategory extends string,
+  TCombo extends ConcreteCombo & { weight?: number },
+>(
   categories: readonly TCategory[],
   combos: TCombo[],
   bucketSelector: (combo: TCombo) => TCategory[],
 ): CategorySummary<TCategory>[] {
-  const buckets = new Map<TCategory, ConcreteCombo[]>()
+  const buckets = new Map<TCategory, { count: number; examples: ConcreteCombo[] }>()
+  const totalWeight = sumComboWeights(combos)
 
   for (const category of categories) {
-    buckets.set(category, [])
+    buckets.set(category, {
+      count: 0,
+      examples: [],
+    })
   }
 
   for (const combo of combos) {
     const comboCategories = bucketSelector(combo)
+    const comboWeight = (combo as ConcreteCombo & { weight?: number }).weight ?? 1
 
     for (const category of comboCategories) {
-      buckets.get(category)?.push(combo)
+      const bucket = buckets.get(category)
+
+      if (bucket === undefined) {
+        continue
+      }
+
+      bucket.count += comboWeight
+
+      if (bucket.examples.length < 3) {
+        bucket.examples.push(combo)
+      }
     }
   }
 
   return categories
     .map((category) => {
-      const bucket = buckets.get(category) ?? []
+      const bucket = buckets.get(category)
 
       return {
         category,
-        count: bucket.length,
-        examples: bucket.slice(0, 3).map((combo) => combo.combo),
-        share: combos.length === 0 ? 0 : bucket.length / combos.length,
+        count: bucket?.count ?? 0,
+        examples: (bucket?.examples ?? []).map((combo) => combo.combo),
+        share: totalWeight === 0 ? 0 : (bucket?.count ?? 0) / totalWeight,
       }
     })
     .filter((summary) => summary.count > 0)
@@ -338,6 +620,32 @@ export function getRangeGrid() {
   return rangeRanks.map((_, rowIndex) =>
     rangeRanks.map((__, columnIndex) => getRangeCell(rowIndex, columnIndex)),
   )
+}
+
+export function createRangeSelectionWeights(
+  labels: string[],
+  weight = 1,
+) {
+  const normalizedWeight = clampWeight(weight)
+  const selection: RangeSelectionWeights = {}
+
+  for (const label of labels) {
+    selection[label] = normalizedWeight
+  }
+
+  return selection
+}
+
+export function getRangeCellWeight(
+  selection: string[] | RangeSelectionWeights,
+  label: string,
+) {
+  const entry = getRangeSelectionEntries(selection).find(([entryLabel]) => entryLabel === label)
+  return entry?.[1] ?? 0
+}
+
+export function listSelectedRangeCells(selection: string[] | RangeSelectionWeights) {
+  return getRangeSelectionEntries(selection).map(([label]) => label)
 }
 
 export function expandRangeCell(label: string): ConcreteCombo[] {
@@ -463,29 +771,50 @@ export function getPresetRangeCells(preset: RangePreset) {
   return Array.from(selected)
 }
 
+export function getPresetRangeWeights(preset: RangePreset, weight = 1) {
+  return createRangeSelectionWeights(getPresetRangeCells(preset), weight)
+}
+
 export function getCardOptions() {
   return rangeRanks.flatMap((rank) => cardSuits.map((suit) => makeCard(rank, suit)))
 }
 
-export function analyzeRange(selectedCells: string[], boardSlots: ReadonlyArray<CardCode | ''>) {
+export function expandWeightedRangeSelection(selection: string[] | RangeSelectionWeights) {
+  return getRangeSelectionEntries(selection).flatMap(([label, weight]) =>
+    expandRangeCell(label).map(
+      (combo) =>
+        ({
+          ...combo,
+          weight,
+        }) satisfies WeightedConcreteCombo,
+    ),
+  )
+}
+
+export function analyzeRange(
+  selectedCells: string[] | RangeSelectionWeights,
+  boardSlots: ReadonlyArray<CardCode | ''>,
+) {
   const board = boardSlots.filter((card): card is CardCode => card !== '')
   const boardSet = new Set(board)
-  const rawCombos = selectedCells.flatMap((cell) => expandRangeCell(cell))
+  const rawCombos = expandWeightedRangeSelection(selectedCells)
   const liveCombos = rawCombos.filter(
     (combo) => !combo.cards.some((card) => boardSet.has(card)),
   )
 
-  const combosWithHands = board.length >= 3
-    ? liveCombos.map((combo) => ({
-        ...combo,
-        drawFlags: getDrawFlags([...combo.cards, ...board], board.length),
-        madeHand: getMadeHandCategory([...combo.cards, ...board]),
-      }))
-    : []
+  const combosWithHands =
+    board.length >= 3
+      ? liveCombos.map((combo) => ({
+          ...combo,
+          drawFlags: getDrawFlags([...combo.cards, ...board], board.length),
+          madeHand: getMadeHandCategory([...combo.cards, ...board]),
+        }))
+      : []
 
   return {
     blockedComboCount: rawCombos.length - liveCombos.length,
     board,
+    boardTexture: describeBoardTexture(board, combosWithHands),
     drawSummaries:
       board.length >= 3
         ? summarizeCategories(drawOrder, combosWithHands, (combo) =>
@@ -499,7 +828,10 @@ export function analyzeRange(selectedCells: string[], boardSlots: ReadonlyArray<
         : [],
     postflopReady: board.length >= 3,
     rawComboCount: rawCombos.length,
-    selectedCellCount: selectedCells.length,
+    selectedCellCount: listSelectedRangeCells(selectedCells).length,
+    weightedBlockedComboCount: sumComboWeights(rawCombos) - sumComboWeights(liveCombos),
+    weightedLiveComboCount: sumComboWeights(liveCombos),
+    weightedRawComboCount: sumComboWeights(rawCombos),
   } satisfies RangeAnalysis
 }
 

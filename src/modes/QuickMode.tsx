@@ -1,9 +1,11 @@
+import { useMemo, useState } from 'react'
 import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import {
   describeRatioAccuracy,
   formatBetLabel,
   formatExactRatio,
+  formatInteger,
   formatRatio,
   formatShare,
   pluralizeRu,
@@ -23,6 +25,7 @@ type QuickModeProps = {
 const quickHeroActions = [
   { label: 'К калькулятору', href: '#quick-calculator' },
   { label: 'К цифрам', href: '#quick-summary' },
+  { label: 'К дриллу', href: '#quick-drill' },
   { label: 'К мнемонике', href: '#quick-memory' },
   { label: 'К шпаргалке', href: '#quick-cheatsheet' },
 ]
@@ -32,6 +35,7 @@ const RATIO_ERROR_THRESHOLD_PERCENT = 0.5
 const BET_SLIDER_MIN = 1
 const BET_SLIDER_MAX = 300
 const BET_SLIDER_TICKS = [1, 25, 50, 75, 100, 150, 200, 300] as const
+const drillBetPool = [25, 33, 40, 50, 66, 75, 100, 125, 150, 200] as const
 
 function sliderPositionPercent(value: number) {
   return ((value - BET_SLIDER_MIN) / (BET_SLIDER_MAX - BET_SLIDER_MIN)) * 100
@@ -42,8 +46,16 @@ export function QuickMode({
   displayMode,
   onBetPercentChange,
 }: QuickModeProps) {
+  const [drillBetPercent, setDrillBetPercent] = useState(75)
+  const [drillGuess, setDrillGuess] = useState(33)
+  const [drillChecked, setDrillChecked] = useState(false)
+  const [drillStreak, setDrillStreak] = useState(0)
   const betMultiple = betPercent / 100
   const metrics = calculateMetrics(betMultiple)
+  const drillMetrics = useMemo(
+    () => calculateMetrics(drillBetPercent / 100),
+    [drillBetPercent],
+  )
   const exactValueToBluff = (1 + betMultiple) / betMultiple
   const ratioAccuracy = describeRatioAccuracy(
     metrics.valueToBluff.numerator,
@@ -51,6 +63,22 @@ export function QuickMode({
     exactValueToBluff,
   )
   const showRatioAccuracy = ratioAccuracy.errorPercent >= RATIO_ERROR_THRESHOLD_PERCENT
+  const drillDifference = Math.abs(drillMetrics.breakEvenFe * 100 - drillGuess)
+  const drillSolved = drillDifference <= 1.5
+
+  function nextDrillRound() {
+    const nextOptions = drillBetPool.filter((size) => size !== drillBetPercent)
+    const nextBet = nextOptions[Math.floor(Math.random() * nextOptions.length)] ?? drillBetPool[0]
+
+    setDrillBetPercent(nextBet)
+    setDrillGuess(0)
+    setDrillChecked(false)
+  }
+
+  function checkDrill() {
+    setDrillChecked(true)
+    setDrillStreak((currentStreak) => (drillSolved ? currentStreak + 1 : 0))
+  }
 
   return (
     <>
@@ -217,7 +245,7 @@ export function QuickMode({
           </article>
 
           <article className="result-card">
-            <p className="card-label">Шансы банка на колл</p>
+            <p className="card-label">Колл и value:bluff</p>
             <h3>
               {formatRatio(
                 metrics.valueToBluff.numerator,
@@ -231,31 +259,16 @@ export function QuickMode({
               </p>
             ) : null}
             <p>
-              Оппонент доплачивает <strong>{metrics.valueToBluff.denominator}</strong>, чтобы
-              забрать банк в <strong>{metrics.valueToBluff.numerator}</strong>{' '}
-              {pluralizeRu(metrics.valueToBluff.numerator, ['часть', 'части', 'частей'])}.
-              Это те же пот-оддсы, просто записаны со стороны колла.
+              Значения совпадают, потому что обе задачи читают одну и ту же дробь:{' '}
+              <strong>(банк + ставка) : ставка</strong>.
             </p>
-          </article>
-
-          <article className="result-card">
-            <p className="card-label">Сколько value на 1 bluff</p>
-            <h3>
-              {formatRatio(
-                metrics.valueToBluff.numerator,
-                metrics.valueToBluff.denominator,
-              )}
-            </h3>
-            {showRatioAccuracy ? (
-              <p className="ratio-exact">
-                точно {formatExactRatio(ratioAccuracy.exactValue)}, погрешность{' '}
-                ~{ratioAccuracy.errorPercent.toFixed(1)}%
-              </p>
-            ) : null}
-            <p>
-              Если FE читается как <strong>a/b</strong>, то баланс по{' '}
-              <strong>value:bluff</strong> читается как <strong>b:a</strong>. Одна дробь
-              обслуживает обе задачи.
+            <p className="card-footnote">
+              Для колла это: доплатить <strong>{metrics.valueToBluff.denominator}</strong>,
+              чтобы выиграть <strong>{metrics.valueToBluff.numerator}</strong>{' '}
+              {pluralizeRu(metrics.valueToBluff.numerator, ['часть', 'части', 'частей'])}.
+              Для river-баланса это: держать{' '}
+              <strong>{metrics.valueToBluff.numerator} value</strong> на{' '}
+              <strong>{metrics.valueToBluff.denominator} bluff</strong>.
             </p>
           </article>
 
@@ -269,6 +282,77 @@ export function QuickMode({
           </article>
         </section>
       </main>
+
+      <section className="surface lesson-card jump-target quick-drill-card" id="quick-drill">
+        <div className="section-head compact">
+          <div>
+            <p className="kicker">Мини-дрилл</p>
+            <h2>Угадай, сколько фолдов нужно этому сайзингу</h2>
+          </div>
+          <p className="table-note">
+            Быстрая тренировка на one-liner-вопрос: видишь ставку и сразу пытаешься назвать
+            breakeven FE без калькулятора.
+          </p>
+        </div>
+
+        <div className="summary-grid compact-summary">
+          <article className="result-card primary">
+            <p className="card-label">Сайзинг в задаче</p>
+            <h3>{formatBetLabel(drillBetPercent / 100, displayMode)}</h3>
+            <p>Назови долю фолдов, которая нужна чистому блефу для нуля.</p>
+          </article>
+          <article className="result-card">
+            <p className="card-label">Серия</p>
+            <h3>{formatInteger(drillStreak)}</h3>
+            <p>Считается только если попадаешь в ответ с точностью примерно до 1,5 п.п.</p>
+          </article>
+        </div>
+
+        <div className="quick-drill-controls">
+          <EditableNumberField
+            ariaLabel="Drill fold equity guess"
+            className="number-field compact-field"
+            inputMax={100}
+            inputMin={0}
+            label="Твой ответ, %"
+            onValueChange={(value) => {
+              setDrillGuess(value)
+              if (drillChecked) {
+                setDrillChecked(false)
+              }
+            }}
+            sanitizeMax={100}
+            sanitizeMin={0}
+            value={drillGuess}
+          />
+
+          <div className="quick-drill-actions">
+            <button className="mode-chip active" onClick={checkDrill} type="button">
+              Проверить
+            </button>
+            <button className="mode-chip" onClick={nextDrillRound} type="button">
+              Новый спот
+            </button>
+          </div>
+        </div>
+
+        <p className="igor-summary">
+          Подсказка без спойлера: сначала переведи ставку в <strong>риск за награду</strong>, а
+          потом прочитай FE как <strong>risk / (risk + reward)</strong>.
+        </p>
+
+        {drillChecked ? (
+          <article className={drillSolved ? 'result-card quick-drill-result success' : 'result-card quick-drill-result'}>
+            <p className="card-label">{drillSolved ? 'Попал' : 'Мимо, но близко'}</p>
+            <h3>{formatShare(drillMetrics.breakEvenFe, 'percent')}</h3>
+            <p>
+              Твой ответ: <strong>{formatShare(drillGuess / 100, 'percent')}</strong>, ошибка около{' '}
+              <strong>{drillDifference.toFixed(1)} п.п.</strong>. Для этого сайзинга MDF будет{' '}
+              <strong>{formatShare(drillMetrics.mdf, displayMode)}</strong>.
+            </p>
+          </article>
+        ) : null}
+      </section>
 
       <section className="lesson-grid jump-target" id="quick-memory">
         <article className="surface lesson-card warning-card">

@@ -16,4 +16,21 @@ describe('IgorMode', () => {
     expect(screen.getByText('Спот в формате клиента')).toBeInTheDocument()
     expect(screen.getByText('Банк в клиенте')).toBeInTheDocument()
   })
+
+  it('stores the current spot in local memory', async () => {
+    const user = userEvent.setup()
+
+    render(<IgorMode displayMode="percent" />)
+
+    await user.click(screen.getByRole('button', { name: 'Запомнить в историю' }))
+
+    expect(screen.getAllByText(/чистый 24 \/ 19/i).length).toBeGreaterThan(0)
+  })
+
+  it('renders the multi-street line builder summary', () => {
+    render(<IgorMode displayMode="percent" />)
+
+    expect(screen.getByRole('heading', { name: /Собери c-bet \/ barrel \/ jam/i })).toBeInTheDocument()
+    expect(screen.getAllByText('581').length).toBeGreaterThan(0)
+  })
 })

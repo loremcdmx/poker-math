@@ -10,10 +10,10 @@ describe('AdvancedMode', () => {
     render(<AdvancedMode displayMode="percent" />)
 
     await user.click(screen.getByRole('button', { name: 'Очистить' }))
-    expect(screen.getByText(/0 классов/)).toBeInTheDocument()
+    expect(screen.getAllByText(/0 классов/).length).toBeGreaterThan(0)
 
     await user.click(screen.getByRole('button', { name: 'TT+' }))
-    expect(screen.getByText(/5 классов/)).toBeInTheDocument()
+    expect(screen.getAllByText(/5 классов/).length).toBeGreaterThan(0)
 
     await user.click(screen.getByRole('button', { name: 'A♥' }))
     await user.click(screen.getByRole('button', { name: 'K♦' }))

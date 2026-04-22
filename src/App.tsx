@@ -1,5 +1,6 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import './App.css'
+import { useLocalStorageState } from './lib/storage'
 import { AdvancedMode } from './modes/AdvancedMode'
 import { IgorMode } from './modes/IgorMode'
 import { QuickMode } from './modes/QuickMode'
@@ -8,12 +9,17 @@ import type { DisplayMode } from './lib/pokerMath'
 type AppMode = 'quick' | 'igor' | 'advanced'
 
 const BASE_APP_MODES: AppMode[] = ['quick', 'igor']
+const ADVANCED_MODE_ENABLED = import.meta.env.VITE_ENABLE_ADVANCED_MODE === '1'
+const ADVANCED_MODE_PASSWORD = import.meta.env.VITE_ADVANCED_MODE_PASSWORD ?? '123'
 
 function App() {
-  const [appMode, setAppMode] = useState<AppMode>('quick')
-  const [betPercent, setBetPercent] = useState(50)
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('percent')
-  const [advMode, setAdvMode] = useState(false)
+  const [appMode, setAppMode] = useLocalStorageState<AppMode>('pokermath.app.mode', 'quick')
+  const [betPercent, setBetPercent] = useLocalStorageState('pokermath.quick.bet-percent', 50)
+  const [displayMode, setDisplayMode] = useLocalStorageState<DisplayMode>(
+    'pokermath.display-mode',
+    'percent',
+  )
+  const [advMode, setAdvMode] = useLocalStorageState('pokermath.advanced.toggle', false)
   const [advancedPassword, setAdvancedPassword] = useState('')
   const [advancedUnlocked, setAdvancedUnlocked] = useState(false)
   const [advancedPasswordError, setAdvancedPasswordError] = useState('')
@@ -23,7 +29,17 @@ function App() {
     quick: null,
   })
 
-  const visibleModes: AppMode[] = advMode ? [...BASE_APP_MODES, 'advanced'] : BASE_APP_MODES
+  const advancedVisible = ADVANCED_MODE_ENABLED && advMode
+  const visibleModes = useMemo<AppMode[]>(
+    () => (advancedVisible ? [...BASE_APP_MODES, 'advanced'] : BASE_APP_MODES),
+    [advancedVisible],
+  )
+
+  useEffect(() => {
+    if (!visibleModes.includes(appMode)) {
+      setAppMode('quick')
+    }
+  }, [appMode, setAppMode, visibleModes])
 
   function handleModeTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentMode: AppMode) {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
@@ -40,6 +56,10 @@ function App() {
   }
 
   function toggleAdvMode() {
+    if (!ADVANCED_MODE_ENABLED) {
+      return
+    }
+
     setAdvMode((previousValue) => {
       const nextValue = !previousValue
 
@@ -54,13 +74,13 @@ function App() {
   function handleAdvancedUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (advancedPassword === '123') {
+    if (advancedPassword === ADVANCED_MODE_PASSWORD) {
       setAdvancedUnlocked(true)
       setAdvancedPasswordError('')
       return
     }
 
-    setAdvancedPasswordError('Неверный пароль. Подсказка: сейчас это 123.')
+    setAdvancedPasswordError('Неверный пароль.')
   }
 
   return (
@@ -145,17 +165,6 @@ function App() {
               </button>
             </div>
           </div>
-
-          <button
-            aria-label="Advanced mode"
-            aria-pressed={advMode}
-            className={advMode ? 'adv-toggle surface active' : 'adv-toggle surface'}
-            onClick={toggleAdvMode}
-            type="button"
-          >
-            <span className="adv-toggle-label">Adv</span>
-            <span className="adv-toggle-indicator" aria-hidden="true" />
-          </button>
         </div>
       </div>
 
@@ -212,13 +221,38 @@ function App() {
                     {advancedPasswordError}
                   </p>
                 ) : (
-                  <p className="advanced-lock-note">Демо-пароль сейчас: 123.</p>
+                  <p className="advanced-lock-note">Внутренний режим: пароль не подсказывается в UI.</p>
                 )}
               </article>
             </section>
           )}
         </section>
       )}
+
+      {ADVANCED_MODE_ENABLED ? (
+        <section className="adv-dock-wrap" aria-label="Advanced mode controls">
+          <div className="adv-dock surface">
+            <div className="adv-dock-copy">
+              <p className="kicker">Сервисный тумблер</p>
+              <p className="adv-dock-note">
+                Скрытая демка: включай `advanced` только когда нужно открыть комбинаторику и
+                эквити.
+              </p>
+            </div>
+
+            <button
+              aria-label="Advanced mode"
+              aria-pressed={advMode}
+              className={advMode ? 'adv-toggle surface active' : 'adv-toggle surface'}
+              onClick={toggleAdvMode}
+              type="button"
+            >
+              <span className="adv-toggle-label">Adv</span>
+              <span className="adv-toggle-indicator" aria-hidden="true" />
+            </button>
+          </div>
+        </section>
+      ) : null}
     </div>
   )
 }

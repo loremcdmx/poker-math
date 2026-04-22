@@ -1,15 +1,23 @@
-import { Fragment, useMemo, useState, useTransition } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import {
   getCardOptions,
-  getPresetRangeCells,
+  getPresetRangeWeights,
+  getRangeCellWeight,
   getRangeGrid,
+  listSelectedRangeCells,
   rangeRanks,
   type CardCode,
+  type RangeSelectionWeights,
 } from '../lib/combinatorics'
-import { calculateEquity, getInputCombos, type EquityInputMode } from '../lib/equity'
-import { formatInteger, formatShare } from '../lib/formatters'
+import {
+  calculateEquity,
+  getInputCombos,
+  type EquityInputMode,
+  type EquityResult,
+} from '../lib/equity'
+import { formatDecimal, formatInteger, formatShare } from '../lib/formatters'
 import type { DisplayMode } from '../lib/pokerMath'
 
 const suitGlyphMap = {
@@ -23,6 +31,7 @@ const boardLabels = ['Флоп 1', 'Флоп 2', 'Флоп 3', 'Тёрн', 'Ри
 const exactHandLabels = ['Карта 1', 'Карта 2'] as const
 const rangeGrid = getRangeGrid()
 const cardOptions = getCardOptions()
+const rangeWeightSteps = [0.25, 0.5, 0.75, 1] as const
 
 const equityHeroActions = [
   { href: '#equity-inputs', label: 'Ввод' },
@@ -40,6 +49,16 @@ const presetButtons = [
   { label: '99+', preset: '99plus' as const },
   { label: 'SC', preset: 'suited_connectors' as const },
 ] as const
+
+type EquityModeProps = {
+  displayMode: DisplayMode
+  embedded?: boolean
+}
+
+type EquityWorkerResponse = {
+  requestId: number
+  result: EquityResult
+}
 
 function sanitizeExactHand(
   hand: [CardCode | '', CardCode | ''],
@@ -99,9 +118,36 @@ function describeHand(cards: [CardCode | '', CardCode | '']) {
   return `${formatCard(firstCard)} ${formatCard(secondCard)}`
 }
 
-type EquityModeProps = {
-  displayMode: DisplayMode
-  embedded?: boolean
+function getBoardStageLabel(boardCount: number) {
+  if (boardCount >= 5) {
+    return 'Ривер'
+  }
+
+  if (boardCount === 4) {
+    return 'Тёрн'
+  }
+
+  if (boardCount === 3) {
+    return 'Флоп'
+  }
+
+  if (boardCount > 0) {
+    return 'Префлоп + блокеры'
+  }
+
+  return 'Префлоп'
+}
+
+function formatWeightLabel(weight: number) {
+  return `${Math.round(weight * 100)}%`
+}
+
+function sumComboWeights(combos: Array<{ weight: number }>) {
+  return combos.reduce((total, combo) => total + combo.weight, 0)
+}
+
+function countSelectedRangeCells(selection: RangeSelectionWeights) {
+  return listSelectedRangeCells(selection).length
 }
 
 export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
@@ -109,20 +155,28 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
   const [villainMode, setVillainMode] = useState<EquityInputMode>('range')
   const [heroHand, setHeroHand] = useState<[CardCode | '', CardCode | '']>(['Ah', 'Ad'])
   const [villainHand, setVillainHand] = useState<[CardCode | '', CardCode | '']>(['Kh', 'Kd'])
-  const [heroRange, setHeroRange] = useState<Set<string>>(() => new Set(getPresetRangeCells('99plus')))
-  const [villainRange, setVillainRange] = useState<Set<string>>(
-    () => new Set([...getPresetRangeCells('broadways'), ...getPresetRangeCells('axs')]),
+  const [heroRange, setHeroRange] = useState<RangeSelectionWeights>(() =>
+    getPresetRangeWeights('99plus'),
   )
+  const [villainRange, setVillainRange] = useState<RangeSelectionWeights>(() => ({
+    ...getPresetRangeWeights('broadways'),
+    ...getPresetRangeWeights('axs'),
+  }))
+  const [heroBrushWeight, setHeroBrushWeight] = useState<number>(1)
+  const [villainBrushWeight, setVillainBrushWeight] = useState<number>(1)
   const [boardCards, setBoardCards] = useState<Array<CardCode | ''>>(['', '', '', '', ''])
   const [iterations, setIterations] = useState(4000)
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
   const [isStale, setIsStale] = useState(false)
+  const workerRef = useRef<Worker | null>(null)
+  const requestIdRef = useRef(0)
 
   const heroInput = useMemo(
     () => ({
       handCards: heroHand,
       mode: heroMode,
-      rangeCells: Array.from(heroRange),
+      rangeCells: listSelectedRangeCells(heroRange),
+      rangeWeights: heroRange,
     }),
     [heroHand, heroMode, heroRange],
   )
@@ -131,7 +185,8 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
     () => ({
       handCards: villainHand,
       mode: villainMode,
-      rangeCells: Array.from(villainRange),
+      rangeCells: listSelectedRangeCells(villainRange),
+      rangeWeights: villainRange,
     }),
     [villainHand, villainMode, villainRange],
   )
@@ -140,11 +195,51 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
     calculateEquity(heroInput, villainInput, boardCards, iterations),
   )
 
-  const heroPreviewCombos = useMemo(() => getInputCombos(heroInput, boardCards), [boardCards, heroInput])
+  const heroPreviewCombos = useMemo(
+    () => getInputCombos(heroInput, boardCards),
+    [boardCards, heroInput],
+  )
   const villainPreviewCombos = useMemo(
     () => getInputCombos(villainInput, boardCards),
     [boardCards, villainInput],
   )
+  const heroWeightedCombos = useMemo(
+    () => sumComboWeights(heroPreviewCombos),
+    [heroPreviewCombos],
+  )
+  const villainWeightedCombos = useMemo(
+    () => sumComboWeights(villainPreviewCombos),
+    [villainPreviewCombos],
+  )
+  const boardStageLabel = getBoardStageLabel(result.board.length)
+  const calculationModeLabel = result.calculationMode === 'exact' ? 'Точный' : 'Monte Carlo'
+
+  useEffect(() => {
+    if (typeof Worker === 'undefined') {
+      return
+    }
+
+    const worker = new Worker(new URL('../workers/equityWorker.ts', import.meta.url), {
+      type: 'module',
+    })
+
+    worker.addEventListener('message', (event: MessageEvent<EquityWorkerResponse>) => {
+      if (event.data.requestId !== requestIdRef.current) {
+        return
+      }
+
+      setResult(event.data.result)
+      setIsPending(false)
+      setIsStale(false)
+    })
+
+    workerRef.current = worker
+
+    return () => {
+      worker.terminate()
+      workerRef.current = null
+    }
+  }, [])
 
   function markStale() {
     setIsStale(true)
@@ -181,17 +276,33 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
   }
 
   function recalculateEquity() {
-    startTransition(() => {
-      setResult(calculateEquity(heroInput, villainInput, boardCards, iterations))
-      setIsStale(false)
-    })
+    const nextRequestId = requestIdRef.current + 1
+    requestIdRef.current = nextRequestId
+    setIsPending(true)
+
+    if (workerRef.current !== null) {
+      workerRef.current.postMessage({
+        boardSlots: boardCards,
+        heroInput,
+        iterations,
+        requestId: nextRequestId,
+        villainInput,
+      })
+
+      return
+    }
+
+    const nextResult = calculateEquity(heroInput, villainInput, boardCards, iterations)
+    setResult(nextResult)
+    setIsPending(false)
+    setIsStale(false)
   }
 
   function applyRangePreset(
     side: 'hero' | 'villain',
     preset: (typeof presetButtons)[number]['preset'],
   ) {
-    const nextSelection = new Set(getPresetRangeCells(preset))
+    const nextSelection = getPresetRangeWeights(preset)
 
     if (side === 'hero') {
       setHeroRange(nextSelection)
@@ -204,14 +315,16 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
 
   function toggleRangeCell(side: 'hero' | 'villain', label: string) {
     const setter = side === 'hero' ? setHeroRange : setVillainRange
+    const activeWeight = side === 'hero' ? heroBrushWeight : villainBrushWeight
 
     setter((currentSelection) => {
-      const nextSelection = new Set(currentSelection)
+      const currentWeight = currentSelection[label] ?? 0
+      const nextSelection = { ...currentSelection }
 
-      if (nextSelection.has(label)) {
-        nextSelection.delete(label)
+      if (currentWeight === activeWeight) {
+        delete nextSelection[label]
       } else {
-        nextSelection.add(label)
+        nextSelection[label] = activeWeight
       }
 
       return nextSelection
@@ -251,7 +364,6 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
     }
 
     syncHands(boardCards, heroMode, nextHeroHand, villainMode, nextVillainHand)
-
     markStale()
   }
 
@@ -303,50 +415,111 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
     return false
   }
 
+  function renderRangeMatrix(side: 'hero' | 'villain') {
+    const rangeSelection = side === 'hero' ? heroRange : villainRange
+
+    return (
+      <div className="range-matrix-wrap">
+        <div
+          className="range-matrix"
+          role="grid"
+          aria-label={side === 'hero' ? 'Hero range grid' : 'Villain range grid'}
+        >
+          <div className="range-axis range-corner" aria-hidden="true" />
+          {rangeRanks.map((rank) => (
+            <div className="range-axis" key={`${side}-col-${rank}`}>
+              {rank}
+            </div>
+          ))}
+
+          {rangeGrid.map((row, rowIndex) => (
+            <Fragment key={`${side}-row-${rangeRanks[rowIndex]}`}>
+              <div className="range-axis">{rangeRanks[rowIndex]}</div>
+              {row.map((cell) => {
+                const weight = getRangeCellWeight(rangeSelection, cell.label)
+                const selected = weight > 0
+
+                return (
+                  <button
+                    aria-label={`Toggle ${side} ${cell.label}`}
+                    aria-pressed={selected}
+                    className={`range-cell ${cell.kind}${selected ? ' active' : ''}`}
+                    key={`${side}-${cell.label}`}
+                    onClick={() => toggleRangeCell(side, cell.label)}
+                    type="button"
+                  >
+                    <span>{cell.label}</span>
+                    {selected ? (
+                      <small className="range-cell-weight">{formatWeightLabel(weight)}</small>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
       {embedded ? null : (
-      <header className="hero-panel surface equity-hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Эквити</p>
-          <h1>Рука vs рука, рука vs рендж и рендж vs рендж.</h1>
-          <p className="hero-text">
-            Это уже PokerStove-подобный модуль: задаёшь hero, villain и борд, а калькулятор
-            честно считает equity с учётом блокеров. Пока это Monte Carlo на неполном борде
-            и точный расчёт на готовом ривере.
-          </p>
-          <HeroActionChips
-            ariaLabel="Быстрые переходы equity-режима"
-            items={equityHeroActions}
-          />
-        </div>
+        <header className="hero-panel surface equity-hero">
+          <div className="hero-copy">
+            <p className="eyebrow">Эквити</p>
+            <h1>Рука vs рука, рука vs рендж и рендж vs рендж.</h1>
+            <p className="hero-text">
+              Это уже PokerStove-подобный модуль: задаёшь hero, villain и борд, а калькулятор
+              считает эквити с учётом блокеров, весов диапазона и доверительного интервала.
+            </p>
+            <HeroActionChips
+              ariaLabel="Быстрые переходы equity-режима"
+              items={equityHeroActions}
+            />
+          </div>
 
-        <div className="hero-focus equity-focus">
-          <p className="focus-label">Текущий спот</p>
-          <p className="focus-size">
-            {formatShare(result.heroEquity, displayMode)} / {formatShare(result.villainEquity, displayMode)}
-          </p>
-          <p className="focus-subtitle">
-            Hero сейчас играет <strong>{heroMode === 'hand' ? describeHand(heroHand) : `${formatInteger(heroPreviewCombos.length)} комбо`}</strong>{' '}
-            против{' '}
-            <strong>{villainMode === 'hand' ? describeHand(villainHand) : `${formatInteger(villainPreviewCombos.length)} комбо`}</strong>.
-          </p>
-          <div className="focus-metrics">
-            <div>
-              <span>Валидных матчапов</span>
-              <strong>{formatInteger(result.validMatchups)}</strong>
-            </div>
-            <div>
-              <span>Сэмплов</span>
-              <strong>{formatInteger(result.sampledTrials)}</strong>
-            </div>
-            <div>
-              <span>Статус</span>
-              <strong>{isPending ? 'считает' : isStale ? 'нужно обновить' : 'актуально'}</strong>
+          <div className="hero-focus equity-focus">
+            <p className="focus-label">Текущий спот</p>
+            <p className="focus-size">
+              {formatShare(result.heroEquity, displayMode)} /{' '}
+              {formatShare(result.villainEquity, displayMode)}
+            </p>
+            <p className="focus-subtitle">
+              Hero сейчас играет{' '}
+              <strong>
+                {heroMode === 'hand'
+                  ? describeHand(heroHand)
+                  : `${formatDecimal(heroWeightedCombos)} взвеш. комбо`}
+              </strong>{' '}
+              против{' '}
+              <strong>
+                {villainMode === 'hand'
+                  ? describeHand(villainHand)
+                  : `${formatDecimal(villainWeightedCombos)} взвеш. комбо`}
+              </strong>
+              .
+            </p>
+            <div className="focus-metrics">
+              <div>
+                <span>Валидных матчапов</span>
+                <strong>{formatInteger(result.validMatchups)}</strong>
+              </div>
+              <div>
+                <span>Точность</span>
+                <strong>
+                  {result.calculationMode === 'exact'
+                    ? 'точно'
+                    : `±${formatDecimal(result.confidenceInterval.halfWidth * 100)} п.п.`}
+                </strong>
+              </div>
+              <div>
+                <span>Статус</span>
+                <strong>{isPending ? 'считает' : isStale ? 'нужно обновить' : 'актуально'}</strong>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
       )}
 
       <section className="advanced-layout equity-layout jump-target" id="equity-inputs">
@@ -357,7 +530,7 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
               <h2>Твоя сторона расчёта</h2>
             </div>
             <p className="table-note">
-              Можно задать конкретную руку или целый диапазон классами рук.
+              Можно задать конкретную руку или целый диапазон классами рук с весами.
             </p>
           </div>
 
@@ -429,44 +602,46 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
                 ))}
               </div>
 
-              <div className="range-matrix-wrap">
-                <div className="range-matrix" role="grid" aria-label="Hero range grid">
-                  <div className="range-axis range-corner" aria-hidden="true" />
-                  {rangeRanks.map((rank) => (
-                    <div className="range-axis" key={`hero-col-${rank}`}>
-                      {rank}
-                    </div>
-                  ))}
-
-                  {rangeGrid.map((row, rowIndex) => (
-                    <Fragment key={`hero-row-${rangeRanks[rowIndex]}`}>
-                      <div className="range-axis">{rangeRanks[rowIndex]}</div>
-                      {row.map((cell) => {
-                        const selected = heroRange.has(cell.label)
-
-                        return (
-                          <button
-                            aria-label={`Toggle hero ${cell.label}`}
-                            aria-pressed={selected}
-                            className={`range-cell ${cell.kind}${selected ? ' active' : ''}`}
-                            key={`hero-${cell.label}`}
-                            onClick={() => toggleRangeCell('hero', cell.label)}
-                            type="button"
-                          >
-                            {cell.label}
-                          </button>
-                        )
-                      })}
-                    </Fragment>
-                  ))}
-                </div>
+              <div className="combo-presets" role="group" aria-label="Hero weight brush">
+                {rangeWeightSteps.map((weight) => (
+                  <button
+                    className={heroBrushWeight === weight ? 'mode-chip active' : 'mode-chip'}
+                    key={`hero-weight-${weight}`}
+                    onClick={() => setHeroBrushWeight(weight)}
+                    type="button"
+                  >
+                    Кисть {formatWeightLabel(weight)}
+                  </button>
+                ))}
               </div>
+
+              {renderRangeMatrix('hero')}
             </>
           )}
 
           <p className="footnote">
-            Hero сейчас даёт <strong>{formatInteger(heroPreviewCombos.length)}</strong> live-комбо.
+            Hero сейчас даёт <strong>{formatInteger(heroPreviewCombos.length)}</strong> live-комбо,
+            эффективно <strong>{formatDecimal(heroWeightedCombos)}</strong>.
           </p>
+
+          <div className="equity-side-summary" aria-label="Hero range summary">
+            <div>
+              <span>Режим</span>
+              <strong>{heroMode === 'hand' ? 'Точная рука' : 'Диапазон'}</strong>
+            </div>
+            <div>
+              <span>Стартовая точка</span>
+              <strong>
+                {heroMode === 'hand'
+                  ? describeHand(heroHand)
+                  : `${formatInteger(countSelectedRangeCells(heroRange))} классов рук`}
+              </strong>
+            </div>
+            <div>
+              <span>Живые комбо</span>
+              <strong>{formatDecimal(heroWeightedCombos)}</strong>
+            </div>
+          </div>
         </section>
 
         <section className="surface equity-panel">
@@ -476,7 +651,7 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
               <h2>Оппонент</h2>
             </div>
             <p className="table-note">
-              Тот же принцип: можно сузить до руки или оставить диапазон.
+              Тот же принцип: конкретная рука или диапазон с разной долей микса.
             </p>
           </div>
 
@@ -548,44 +723,46 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
                 ))}
               </div>
 
-              <div className="range-matrix-wrap">
-                <div className="range-matrix" role="grid" aria-label="Villain range grid">
-                  <div className="range-axis range-corner" aria-hidden="true" />
-                  {rangeRanks.map((rank) => (
-                    <div className="range-axis" key={`villain-col-${rank}`}>
-                      {rank}
-                    </div>
-                  ))}
-
-                  {rangeGrid.map((row, rowIndex) => (
-                    <Fragment key={`villain-row-${rangeRanks[rowIndex]}`}>
-                      <div className="range-axis">{rangeRanks[rowIndex]}</div>
-                      {row.map((cell) => {
-                        const selected = villainRange.has(cell.label)
-
-                        return (
-                          <button
-                            aria-label={`Toggle villain ${cell.label}`}
-                            aria-pressed={selected}
-                            className={`range-cell ${cell.kind}${selected ? ' active' : ''}`}
-                            key={`villain-${cell.label}`}
-                            onClick={() => toggleRangeCell('villain', cell.label)}
-                            type="button"
-                          >
-                            {cell.label}
-                          </button>
-                        )
-                      })}
-                    </Fragment>
-                  ))}
-                </div>
+              <div className="combo-presets" role="group" aria-label="Villain weight brush">
+                {rangeWeightSteps.map((weight) => (
+                  <button
+                    className={villainBrushWeight === weight ? 'mode-chip active' : 'mode-chip'}
+                    key={`villain-weight-${weight}`}
+                    onClick={() => setVillainBrushWeight(weight)}
+                    type="button"
+                  >
+                    Кисть {formatWeightLabel(weight)}
+                  </button>
+                ))}
               </div>
+
+              {renderRangeMatrix('villain')}
             </>
           )}
 
           <p className="footnote">
-            Villain сейчас даёт <strong>{formatInteger(villainPreviewCombos.length)}</strong> live-комбо.
+            Villain сейчас даёт <strong>{formatInteger(villainPreviewCombos.length)}</strong>{' '}
+            live-комбо, эффективно <strong>{formatDecimal(villainWeightedCombos)}</strong>.
           </p>
+
+          <div className="equity-side-summary" aria-label="Villain range summary">
+            <div>
+              <span>Режим</span>
+              <strong>{villainMode === 'hand' ? 'Точная рука' : 'Диапазон'}</strong>
+            </div>
+            <div>
+              <span>Стартовая точка</span>
+              <strong>
+                {villainMode === 'hand'
+                  ? describeHand(villainHand)
+                  : `${formatInteger(countSelectedRangeCells(villainRange))} классов рук`}
+              </strong>
+            </div>
+            <div>
+              <span>Живые комбо</span>
+              <strong>{formatDecimal(villainWeightedCombos)}</strong>
+            </div>
+          </div>
         </section>
       </section>
 
@@ -596,9 +773,30 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
             <h2>Доска, блокеры и точность расчёта</h2>
           </div>
           <p className="table-note">
-            На полном ривере калькулятор считает точно по всем валидным матчапам. На флопе и
-            тёрне — Monte Carlo, чтобы вкладка оставалась быстрой.
+            Если exact enumeration укладывается в безопасный объём, движок считает точно даже
+            на неполном борде. Иначе уходит в Monte Carlo с адаптивным числом сэмплов.
           </p>
+        </div>
+
+        <div className="advanced-meta-strip" aria-label="Сводка эквити">
+          <div className="advanced-meta-pill">
+            <span>Стадия</span>
+            <strong>{boardStageLabel}</strong>
+          </div>
+          <div className="advanced-meta-pill">
+            <span>Режим расчёта</span>
+            <strong>{calculationModeLabel}</strong>
+          </div>
+          <div className="advanced-meta-pill">
+            <span>Матчапы</span>
+            <strong>
+              {formatInteger(result.validMatchups)} / {formatDecimal(result.weightedMatchups)}
+            </strong>
+          </div>
+          <div className="advanced-meta-pill">
+            <span>Статус</span>
+            <strong>{isPending ? 'Считает' : isStale ? 'Нужно обновить' : 'Актуально'}</strong>
+          </div>
         </div>
 
         <div className="board-control-grid">
@@ -611,17 +809,15 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
                 value={boardCards[index]}
               >
                 <option value="">—</option>
-                {cardOptions.map((card) => {
-                  return (
-                    <option
-                      disabled={isBoardCardDisabled(index, card)}
-                      key={`board-${card}`}
-                      value={card}
-                    >
-                      {formatCard(card)}
-                    </option>
-                  )
-                })}
+                {cardOptions.map((card) => (
+                  <option
+                    disabled={isBoardCardDisabled(index, card)}
+                    key={`board-${card}`}
+                    value={card}
+                  >
+                    {formatCard(card)}
+                  </option>
+                ))}
               </select>
             </label>
           ))}
@@ -631,7 +827,7 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
           <EditableNumberField
             className="number-field compact-field"
             inputMin={100}
-            label="Monte Carlo сэмплы"
+            label="Базовый бюджет сэмплов"
             onValueChange={(nextValue) => {
               setIterations(nextValue)
               markStale()
@@ -662,16 +858,15 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
           {result.validMatchups === 0
             ? 'Сейчас нет валидных матчапов: проверь пересечения карт между hero, villain и бордом или пустой диапазон.'
             : isPending
-              ? 'Идёт пересчёт equity.'
+              ? 'Идёт пересчёт equity в фоне.'
               : isStale
                 ? 'Параметры изменились: текущие equity-цифры уже устарели, нажми «Пересчитать equity».'
                 : 'Текущий результат соответствует выбранным рукам, диапазонам и борду.'}
         </p>
 
         <p className="igor-summary">
-          Мнемоника: эта вкладка уже считает не <strong>пот-оддсы</strong>, а реальную
-          showdown-equity. Поэтому здесь важны <strong>блокеры</strong>,{' '}
-          <strong>пересечения диапазонов</strong> и стадия борда.
+          Мнемоника: здесь уже важна не только точка equity, но и доверие к ней. Exact-режим даёт
+          нулевой интервал ошибки, а Monte Carlo показывает, насколько ещё шумит оценка.
         </p>
       </section>
 
@@ -695,19 +890,24 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
         </article>
 
         <article className="result-card">
-          <p className="card-label">Валидных матчапов</p>
-          <h3>{formatInteger(result.validMatchups)}</h3>
+          <p className="card-label">Confidence interval</p>
+          <h3>
+            {formatShare(result.confidenceInterval.low, displayMode)} -{' '}
+            {formatShare(result.confidenceInterval.high, displayMode)}
+          </h3>
           <p>
-            Сколько комбинаций <strong>hero x villain</strong> реально существует после вычитания
-            одинаковых карт и борда.
+            {result.calculationMode === 'exact'
+              ? 'Точный режим: интервал схлопнулся в одну точку.'
+              : `Ширина сейчас около ±${formatDecimal(result.confidenceInterval.halfWidth * 100)} п.п.`}
           </p>
         </article>
 
         <article className="result-card">
-          <p className="card-label">Режим расчёта</p>
-          <h3>{result.board.length === 5 ? 'Точный' : 'Monte Carlo'}</h3>
+          <p className="card-label">Сэмплы и план</p>
+          <h3>{calculationModeLabel}</h3>
           <p>
-            Сэмплов использовано: <strong>{formatInteger(result.sampledTrials)}</strong>.
+            Использовано <strong>{formatInteger(result.sampledTrials)}</strong> из плана{' '}
+            <strong>{formatInteger(result.plannedTrials)}</strong>.
           </p>
         </article>
       </section>

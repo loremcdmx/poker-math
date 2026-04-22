@@ -41,6 +41,30 @@
   gap: 10px 14px;
 }
 
+.adv-dock-wrap {
+  margin-top: 24px;
+}
+
+.adv-dock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 18px;
+  padding: 14px 16px;
+  border-radius: 24px;
+}
+
+.adv-dock-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.adv-dock-note {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
 .global-display {
   display: flex;
   align-items: center;
@@ -488,6 +512,7 @@
 .cheat-table,
 .lesson-card,
 .igor-converter,
+.igor-line-builder,
 .igor-raises,
 .igor-notes {
   padding: 28px;
@@ -526,6 +551,24 @@
 
 .compact-field {
   min-width: 124px;
+}
+
+.igor-line-builder .number-field {
+  gap: 10px;
+  text-align: center;
+}
+
+.igor-line-builder .number-field span {
+  font-size: 0.96rem;
+}
+
+.igor-line-builder .number-field input {
+  min-height: 74px;
+  padding: 14px 18px;
+  text-align: center;
+  font-size: clamp(1.5rem, 2vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
 .number-field.bet-percent-field {
@@ -836,9 +879,10 @@ table {
 }
 
 caption {
-  padding: 0 0 12px;
+  padding: 6px 0 12px;
   text-align: left;
   font-size: 0.92rem;
+  line-height: 1.4;
   color: var(--ink-soft);
 }
 
@@ -1069,6 +1113,7 @@ tbody tr:hover td {
 }
 
 .advanced-layout {
+  align-items: start;
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
   margin-top: 24px;
 }
@@ -1077,9 +1122,49 @@ tbody tr:hover td {
   align-items: start;
 }
 
+.advanced-switch-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.advanced-switch-note {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.58;
+  max-width: 64ch;
+}
+
 .combo-guide-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 24px;
+}
+
+.advanced-meta-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.advanced-meta-pill {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(58, 38, 23, 0.1);
+  background: rgba(255, 252, 246, 0.82);
+}
+
+.advanced-meta-pill span {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.advanced-meta-pill strong {
+  color: var(--ink-strong);
+  font-size: 1.02rem;
 }
 
 .combo-presets {
@@ -1113,6 +1198,38 @@ tbody tr:hover td {
   color: var(--ink-soft);
 }
 
+.range-selection-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.range-selection-chip,
+.range-selection-more,
+.range-selection-empty {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(58, 38, 23, 0.1);
+  background: rgba(255, 252, 246, 0.82);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.range-selection-chip {
+  color: var(--ink-strong);
+  font-weight: 700;
+}
+
+.range-selection-more {
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+.range-selection-empty {
+  line-height: 1.5;
+}
+
 .range-axis,
 .range-cell {
   display: grid;
@@ -1139,6 +1256,8 @@ tbody tr:hover td {
   color: var(--ink-strong);
   font: inherit;
   font-weight: 700;
+  gap: 3px;
+  padding: 6px 4px;
   cursor: pointer;
   transition:
     transform 0.16s ease,
@@ -1172,6 +1291,14 @@ tbody tr:hover td {
   background: linear-gradient(135deg, rgba(24, 92, 76, 0.95), rgba(15, 58, 48, 0.92));
   border-color: rgba(24, 92, 76, 0.4);
   color: var(--felt-cream);
+}
+
+.range-cell-weight {
+  font-size: 0.64rem;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.86;
 }
 
 .board-slots {
@@ -1362,6 +1489,53 @@ tbody tr:hover td {
   font-size: clamp(1.75rem, 3.3vw, 2.6rem);
 }
 
+.quick-drill-card {
+  margin-top: 24px;
+}
+
+.quick-drill-controls,
+.quick-drill-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+.quick-drill-controls {
+  margin-top: 18px;
+  justify-content: space-between;
+}
+
+.quick-drill-actions {
+  margin-top: 18px;
+}
+
+.quick-drill-result {
+  margin-top: 18px;
+}
+
+.quick-drill-result.success {
+  background:
+    linear-gradient(180deg, rgba(231, 248, 241, 0.92), rgba(221, 242, 233, 0.86)),
+    rgba(231, 248, 241, 0.88);
+  border-color: rgba(24, 92, 76, 0.16);
+}
+
+.spot-memory-grid,
+.texture-tag-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.spot-memory-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.texture-tag-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .combo-table-stack .table-wrap {
   margin-top: 0;
 }
@@ -1523,12 +1697,80 @@ tbody tr:hover td {
   font-weight: 700;
 }
 
+.board-control-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.board-field {
+  display: grid;
+  gap: 8px;
+}
+
+.board-field span {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.board-field select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(58, 38, 23, 0.12);
+  background: rgba(255, 252, 246, 0.92);
+  color: var(--ink-strong);
+  font: inherit;
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.board-field select:focus-visible {
+  outline: none;
+  border-color: rgba(24, 92, 76, 0.36);
+  box-shadow:
+    0 0 0 3px rgba(24, 92, 76, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
 .equity-panel {
   padding: 28px;
 }
 
 .equity-hand-grid {
   margin-top: 24px;
+}
+
+.equity-side-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.equity-side-summary div {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(58, 38, 23, 0.1);
+  background: rgba(255, 252, 246, 0.82);
+}
+
+.equity-side-summary span {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.equity-side-summary strong {
+  color: var(--ink-strong);
+  line-height: 1.4;
 }
 
 .equity-toolbar {
@@ -1563,7 +1805,12 @@ tbody tr:hover td {
   .igor-tool-grid,
   .summary-grid,
   .advanced-layout,
-  .combo-guide-grid {
+  .combo-guide-grid,
+  .advanced-meta-strip,
+  .equity-side-summary,
+  .board-control-grid,
+  .spot-memory-grid,
+  .texture-tag-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1641,10 +1888,20 @@ tbody tr:hover td {
     justify-content: space-between;
   }
 
+  .adv-dock {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .adv-dock .adv-toggle {
+    justify-content: center;
+  }
+
   .hero-panel,
   .calculator,
   .lesson-card,
   .cheat-table,
+  .igor-line-builder,
   .igor-converter,
   .igor-raises,
   .igor-notes {
@@ -1706,6 +1963,12 @@ tbody tr:hover td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .quick-drill-controls,
+  .quick-drill-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .formula-strip {
     grid-template-columns: 1fr;
   }
@@ -1738,6 +2001,10 @@ tbody tr:hover td {
     flex-direction: column;
   }
 
+  .advanced-switch-layout {
+    gap: 12px;
+  }
+
   .card-picker {
     padding: 10px;
   }
@@ -1762,6 +2029,11 @@ tbody tr:hover td {
     flex-direction: column;
   }
 
+  .board-field select {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
   .advanced-lock-form {
     flex-direction: column;
     align-items: stretch;
@@ -1775,6 +2047,11 @@ tbody tr:hover td {
   .compact-field {
     min-width: 0;
     width: 100%;
+  }
+
+  .igor-line-builder .number-field input {
+    min-height: 68px;
+    font-size: clamp(1.35rem, 5vw, 1.6rem);
   }
 
   .number-field.bet-percent-field {
@@ -1812,5 +2089,9 @@ tbody tr:hover td {
   .board-slots,
   .combo-guide-grid {
     grid-template-columns: 1fr;
+  }
+
+  .adv-dock {
+    padding: 12px;
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import {
@@ -10,6 +10,7 @@ import {
   formatSheetRoundedPercent,
 } from '../lib/formatters'
 import {
+  buildMultiStreetLine,
   calculateBluffWithEquity,
   calculateIgorInventory,
   calculateMetrics,
@@ -20,6 +21,7 @@ import {
   type PotInputMode,
   sanitizeNumber,
 } from '../lib/pokerMath'
+import { useLocalStorageState } from '../lib/storage'
 
 function scrollToSection(sectionId: string) {
   document.getElementById(sectionId)?.scrollIntoView({ behavior: 'auto', block: 'start' })
@@ -29,18 +31,46 @@ type IgorModeProps = {
   displayMode: DisplayMode
 }
 
+type StoredIgorSpot = {
+  id: string
+  igorBet: number
+  igorPot: number
+  knownCount: number
+  knownMode: IgorInventoryMode
+  label: string
+  potInputMode: PotInputMode
+}
+
 export function IgorMode({ displayMode }: IgorModeProps) {
-  const [potInputMode, setPotInputMode] = useState<PotInputMode>('clean')
-  const [knownMode, setKnownMode] = useState<IgorInventoryMode>('value')
-  const [igorPot, setIgorPot] = useState(24)
-  const [igorBet, setIgorBet] = useState(19)
-  const [knownCount, setKnownCount] = useState(88)
-  const [bluffPot, setBluffPot] = useState(100)
-  const [bluffBet, setBluffBet] = useState(50)
-  const [bluffEquity, setBluffEquity] = useState(25)
-  const [raisePot, setRaisePot] = useState(8)
-  const [raiseBet, setRaiseBet] = useState(5)
-  const [raiseTotal, setRaiseTotal] = useState(23)
+  const [potInputMode, setPotInputMode] = useLocalStorageState<PotInputMode>(
+    'pokermath.igor.pot-mode',
+    'clean',
+  )
+  const [knownMode, setKnownMode] = useLocalStorageState<IgorInventoryMode>(
+    'pokermath.igor.known-mode',
+    'value',
+  )
+  const [igorPot, setIgorPot] = useLocalStorageState('pokermath.igor.pot', 24)
+  const [igorBet, setIgorBet] = useLocalStorageState('pokermath.igor.bet', 19)
+  const [knownCount, setKnownCount] = useLocalStorageState('pokermath.igor.known-count', 88)
+  const [bluffPot, setBluffPot] = useLocalStorageState('pokermath.igor.bluff-pot', 100)
+  const [bluffBet, setBluffBet] = useLocalStorageState('pokermath.igor.bluff-bet', 50)
+  const [bluffEquity, setBluffEquity] = useLocalStorageState('pokermath.igor.bluff-equity', 25)
+  const [raisePot, setRaisePot] = useLocalStorageState('pokermath.igor.raise-pot', 8)
+  const [raiseBet, setRaiseBet] = useLocalStorageState('pokermath.igor.raise-bet', 5)
+  const [raiseTotal, setRaiseTotal] = useLocalStorageState('pokermath.igor.raise-total', 23)
+  const [lineStartPot, setLineStartPot] = useLocalStorageState('pokermath.igor.line-start-pot', 40)
+  const [lineFlopBet, setLineFlopBet] = useLocalStorageState('pokermath.igor.line-flop-bet', 33)
+  const [lineTurnBet, setLineTurnBet] = useLocalStorageState('pokermath.igor.line-turn-bet', 75)
+  const [lineRiverBet, setLineRiverBet] = useLocalStorageState('pokermath.igor.line-river-bet', 125)
+  const [recentSpots, setRecentSpots] = useLocalStorageState<StoredIgorSpot[]>(
+    'pokermath.igor.recent-spots',
+    [],
+  )
+  const [savedSpots, setSavedSpots] = useLocalStorageState<StoredIgorSpot[]>(
+    'pokermath.igor.saved-spots',
+    [],
+  )
 
   const inventory = calculateIgorInventory(
     igorPot,
@@ -51,6 +81,47 @@ export function IgorMode({ displayMode }: IgorModeProps) {
   )
   const raiseMetrics = calculateRaiseMetrics(raisePot, raiseBet, raiseTotal)
   const bluffWithEquity = calculateBluffWithEquity(bluffPot, bluffBet, bluffEquity)
+  const linePlan = buildMultiStreetLine(lineStartPot, [lineFlopBet, lineTurnBet, lineRiverBet])
+
+  function buildSpotSnapshot(): StoredIgorSpot {
+    const spotId = [
+      potInputMode,
+      igorPot.toFixed(2),
+      igorBet.toFixed(2),
+      knownMode,
+      knownCount.toFixed(2),
+    ].join(':')
+
+    return {
+      id: spotId,
+      igorBet,
+      igorPot,
+      knownCount,
+      knownMode,
+      label: `${potInputMode === 'client' ? 'клиент' : 'чистый'} ${formatDecimal(igorPot)} / ${formatDecimal(igorBet)} · ${knownMode === 'value' ? 'V' : 'B'} ${formatDecimal(knownCount)}`,
+      potInputMode,
+    }
+  }
+
+  function storeSpot(
+    setter: Dispatch<SetStateAction<StoredIgorSpot[]>>,
+    limit: number,
+  ) {
+    const snapshot = buildSpotSnapshot()
+
+    setter((currentSpots) => {
+      const filtered = currentSpots.filter((spot) => spot.id !== snapshot.id)
+      return [snapshot, ...filtered].slice(0, limit)
+    })
+  }
+
+  function loadSpot(spot: StoredIgorSpot) {
+    setPotInputMode(spot.potInputMode)
+    setIgorPot(spot.igorPot)
+    setIgorBet(spot.igorBet)
+    setKnownMode(spot.knownMode)
+    setKnownCount(spot.knownCount)
+  }
 
   function switchPotInputMode(nextMode: PotInputMode) {
     if (nextMode === potInputMode) {
@@ -91,6 +162,14 @@ export function IgorMode({ displayMode }: IgorModeProps) {
     {
       label: 'Коллбот и блеф с эквити',
       onClick: () => scrollToSection('igor-tools'),
+    },
+    {
+      label: 'Память спотов',
+      onClick: () => scrollToSection('igor-memory'),
+    },
+    {
+      label: 'Line builder',
+      onClick: () => scrollToSection('igor-line-builder'),
     },
     {
       label: 'Банк 100',
@@ -153,6 +232,83 @@ export function IgorMode({ displayMode }: IgorModeProps) {
           </div>
         </div>
       </header>
+
+      <section className="surface jump-target" id="igor-memory">
+        <div className="section-head compact">
+          <div>
+            <p className="kicker">Память</p>
+            <h2>Последние споты и избранные пресеты</h2>
+          </div>
+          <p className="table-note">
+            Это localStorage-память рабочего стола: можно быстро вернуть недавний спот или
+            закрепить частый шаблон без повторного набора полей.
+          </p>
+        </div>
+
+        <div className="quick-drill-actions">
+          <button
+            className="mode-chip active"
+            onClick={() => storeSpot(setRecentSpots, 6)}
+            type="button"
+          >
+            Запомнить в историю
+          </button>
+          <button
+            className="mode-chip"
+            onClick={() => storeSpot(setSavedSpots, 8)}
+            type="button"
+          >
+            Добавить в избранное
+          </button>
+        </div>
+
+        <div className="spot-memory-grid">
+          <div>
+            <p className="card-label">Недавние споты</p>
+            <div className="quick-chip-row">
+              {recentSpots.length > 0 ? (
+                recentSpots.map((spot) => (
+                  <button
+                    className="quick-chip"
+                    key={`recent-${spot.id}`}
+                    onClick={() => loadSpot(spot)}
+                    type="button"
+                  >
+                    {spot.label}
+                  </button>
+                ))
+              ) : (
+                <span className="range-selection-empty">История пока пустая.</span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <p className="card-label">Избранные пресеты</p>
+            <div className="quick-chip-row">
+              {savedSpots.length > 0 ? (
+                savedSpots.map((spot) => (
+                  <button
+                    className="quick-chip"
+                    key={`saved-${spot.id}`}
+                    onClick={() => loadSpot(spot)}
+                    type="button"
+                  >
+                    {spot.label}
+                  </button>
+                ))
+              ) : (
+                <span className="range-selection-empty">Избранных спотов пока нет.</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <p className="igor-summary">
+          Сейчас в работе спот <strong>{buildSpotSnapshot().label}</strong>. Одно нажатие кладёт
+          его либо в недавние, либо в закреплённые шаблоны.
+        </p>
+      </section>
 
       <section className="surface igor-converter jump-target" id="igor-converter">
         <div className="section-head">
@@ -494,6 +650,115 @@ export function IgorMode({ displayMode }: IgorModeProps) {
             </p>
           </section>
         </div>
+      </section>
+
+      <section className="surface igor-line-builder jump-target" id="igor-line-builder">
+        <div className="section-head compact">
+          <div>
+            <p className="kicker">Line builder</p>
+            <h2>Собери c-bet / barrel / jam и посмотри математику по улицам</h2>
+          </div>
+          <p className="table-note">
+            Полезно для планирования линии заранее: как растёт банк после колла и сколько фолдов
+            нужен каждой ставке, если оппонент доходит до следующей улицы.
+          </p>
+        </div>
+
+        <div className="inline-fields">
+          <EditableNumberField
+            className="number-field compact-field"
+            inputMin={0}
+            label="Стартовый банк"
+            onValueChange={setLineStartPot}
+            sanitizeMin={0.01}
+            value={lineStartPot}
+          />
+          <EditableNumberField
+            className="number-field compact-field"
+            inputMin={0}
+            label="Флоп, % банка"
+            onValueChange={setLineFlopBet}
+            sanitizeMin={0}
+            value={lineFlopBet}
+          />
+          <EditableNumberField
+            className="number-field compact-field"
+            inputMin={0}
+            label="Тёрн, % банка"
+            onValueChange={setLineTurnBet}
+            sanitizeMin={0}
+            value={lineTurnBet}
+          />
+          <EditableNumberField
+            className="number-field compact-field"
+            inputMin={0}
+            label="Ривер, % банка"
+            onValueChange={setLineRiverBet}
+            sanitizeMin={0}
+            value={lineRiverBet}
+          />
+        </div>
+
+        <div className="summary-grid compact-summary">
+          <article className="result-card primary">
+            <p className="card-label">Финальный банк после коллов</p>
+            <h3>{formatDecimal(linePlan.finalPotIfCalled)}</h3>
+            <p>Во сколько раз линия раздувает пот, если каждую улицу просто коллят.</p>
+          </article>
+          <article className="result-card">
+            <p className="card-label">Всего инвестируем</p>
+            <h3>{formatDecimal(linePlan.totalInvestment)}</h3>
+            <p>Сумма всех ставок по линии без учёта префлопа и рейк-эффектов.</p>
+          </article>
+        </div>
+
+        <div className="table-wrap">
+          <table>
+            <caption>Пошаговая математика линии по улицам.</caption>
+            <thead>
+              <tr>
+                <th scope="col">Улица</th>
+                <th scope="col">Банк до ставки</th>
+                <th scope="col">Ставка</th>
+                <th scope="col">Фолдов нужно</th>
+                <th scope="col">Bluff share</th>
+                <th scope="col">Банк после колла</th>
+                <th scope="col">Инвестировано суммарно</th>
+              </tr>
+            </thead>
+            <tbody>
+              {linePlan.steps.map((step) => (
+                <tr key={step.street}>
+                  <td>{step.street}</td>
+                  <td>{formatDecimal(step.potBefore)}</td>
+                  <td>
+                    {step.active
+                      ? `${formatDecimal(step.betSize)} (${formatInteger(step.betPercent)}%)`
+                      : 'Чек'}
+                  </td>
+                  <td>
+                    {step.metrics === null
+                      ? '—'
+                      : formatShare(step.metrics.breakEvenFe, displayMode)}
+                  </td>
+                  <td>
+                    {step.metrics === null
+                      ? '—'
+                      : formatShare(step.metrics.bluffShare, displayMode)}
+                  </td>
+                  <td>{formatDecimal(step.potAfterCall)}</td>
+                  <td>{formatDecimal(step.cumulativeInvestment)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="igor-summary">
+          Логика чтения простая: каждая следующая улица уже работает от раздутого банка. Поэтому
+          даже одинаковый по проценту сайзинг на тёрне и ривере в абсолютных фишках ощущается
+          совсем по-разному.
+        </p>
       </section>
 
       <section className="surface cheat-table igor-table jump-target" id="igor-ladder">

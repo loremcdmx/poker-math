@@ -22,6 +22,10 @@ describe('QuickMode', () => {
       'href',
       '#quick-cheatsheet',
     )
+    expect(screen.getByRole('link', { name: 'К дриллу' })).toHaveAttribute(
+      'href',
+      '#quick-drill',
+    )
   })
 
   it('keeps the bet input in sync with slider updates while focused', async () => {
@@ -75,5 +79,39 @@ describe('QuickMode', () => {
     fireEvent.change(input, { target: { value: '140.5' } })
 
     expect(slider.value).toBe('141')
+  })
+
+  it('checks the quick drill answer and reveals the correct FE', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <QuickMode
+        betPercent={50}
+        displayMode="percent"
+        onBetPercentChange={vi.fn()}
+      />,
+    )
+
+    await user.clear(screen.getByRole('textbox', { name: 'Drill fold equity guess' }))
+    await user.type(screen.getByRole('textbox', { name: 'Drill fold equity guess' }), '43')
+    await user.click(screen.getByRole('button', { name: 'Проверить' }))
+
+    expect(screen.getByText('Попал')).toBeInTheDocument()
+    expect(screen.getAllByText('42,9%').length).toBeGreaterThan(0)
+  })
+
+  it('merges call odds and value-to-bluff into one explanation card', () => {
+    render(
+      <QuickMode
+        betPercent={50}
+        displayMode="percent"
+        onBetPercentChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Колл и value:bluff')).toBeInTheDocument()
+    expect(screen.getByText(/\(банк \+ ставка\) : ставка/i)).toBeInTheDocument()
+    expect(screen.queryByText('Шансы банка на колл')).not.toBeInTheDocument()
+    expect(screen.queryByText('Сколько value на 1 bluff')).not.toBeInTheDocument()
   })
 })

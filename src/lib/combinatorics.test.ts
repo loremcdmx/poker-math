@@ -30,4 +30,13 @@ describe('combinatorics', () => {
     expect(analysis.drawSummaries.find((summary) => summary.category === 'flush_draw')?.count).toBe(1)
     expect(analysis.drawSummaries.find((summary) => summary.category === 'combo_draw')?.count).toBe(1)
   })
+
+  it('supports weighted ranges and reports board texture summaries', () => {
+    const analysis = analyzeRange({ AKs: 0.5, AKo: 0.25 }, ['Ah', 'Kd', '7c', '', ''])
+
+    expect(analysis.weightedRawComboCount).toBeCloseTo(5, 6)
+    expect(analysis.weightedLiveComboCount).toBeCloseTo(2.75, 6)
+    expect(analysis.boardTexture?.tags.map((tag) => tag.label)).toContain('A-high')
+    expect(analysis.boardTexture?.pairPlusShare).toBeGreaterThan(0)
+  })
 })
