@@ -530,8 +530,12 @@
 
 .number-field.bet-percent-field {
   min-width: 0;
-  max-width: 150px;
+  max-width: 200px;
   justify-self: end;
+}
+
+.number-field.bet-percent-field span {
+  white-space: nowrap;
 }
 
 .number-field.bet-percent-field input {
@@ -1779,7 +1783,7 @@ tbody tr:hover td {
 
   .number-field.bet-percent-field {
     width: auto;
-    max-width: 140px;
+    max-width: 200px;
   }
 
   .igor-converter-grid,
@@ -2228,5 +2232,129 @@ tbody tr:hover td {
 @media (max-width: 980px) {
   .outs-output {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ================= mobile-focused polish ================= */
+
+.number-field span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 560px) {
+  .app-shell {
+    width: min(100% - 16px, 1180px);
+    padding: 14px 0 28px;
+  }
+
+  .hero-panel {
+    padding: clamp(16px, 4vw, 22px);
+    gap: 18px;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(1.75rem, 7.2vw, 2.4rem);
+    line-height: 1.04;
+  }
+
+  .advanced-hero .hero-copy h1,
+  .igor-hero .hero-copy h1 {
+    font-size: clamp(1.65rem, 6.8vw, 2.2rem);
+    line-height: 1.06;
+  }
+
+  .section-head h2,
+  .lesson-card h2 {
+    font-size: clamp(1.3rem, 5.6vw, 1.85rem);
+    line-height: 1.08;
+  }
+
+  .focus-size {
+    font-size: clamp(1.85rem, 8vw, 2.75rem);
+    letter-spacing: -0.03em;
+  }
+
+  .hero-focus {
+    padding: 18px;
+  }
+
+  .hero-text {
+    font-size: 0.94rem;
+    line-height: 1.56;
+  }
+
+  .result-card {
+    padding: 16px;
+  }
+
+  .result-card h3 {
+    font-size: clamp(1.75rem, 7.6vw, 2.55rem);
+  }
+
+  .combo-breakdown-row {
+    padding: 12px 14px;
+  }
+
+  .combo-breakdown-header {
+    gap: 6px 10px;
+  }
+
+  .combo-breakdown-stats {
+    font-size: 0.86rem;
+  }
+
+  .outs-counter {
+    flex: 1 1 auto;
+    padding: 10px 14px;
+  }
+
+  .outs-counter strong {
+    font-size: 1.6rem;
+  }
+
+  .range-matrix-wrap {
+    margin-right: -14px;
+    padding-right: 14px;
+  }
+
+  table {
+    font-size: 0.92rem;
+  }
+
+  th,
+  td {
+    padding: 10px 10px;
+  }
+}
+
+@media (max-width: 560px) {
+  .mode-switch {
+    width: 100%;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .mode-switch-item {
+    flex: 1 1 0;
+    padding: 11px 8px;
+    font-size: 0.84rem;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  .global-display {
+    padding: 6px 8px 6px 12px;
+    gap: 10px;
+  }
+
+  .global-display-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+  }
+
+  .global-display-item {
+    padding: 8px 10px;
+    font-size: 0.86rem;
   }
 }

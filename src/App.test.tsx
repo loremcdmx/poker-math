@@ -30,7 +30,7 @@ describe('App', () => {
 
     render(<App />)
 
-    const quickTab = screen.getByRole('tab', { name: 'Базовые формулы шансов' })
+    const quickTab = screen.getByRole('tab', { name: 'Формулы шансов' })
     quickTab.focus()
 
     await user.keyboard('{ArrowRight}')

@@ -51,7 +51,7 @@ function App() {
             tabIndex={appMode === 'quick' ? 0 : -1}
             type="button"
           >
-            Базовые формулы шансов
+            Формулы шансов
           </button>
           <button
             aria-controls="combinatorics-panel"
