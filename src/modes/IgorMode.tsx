@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import {
@@ -31,6 +32,16 @@ type IgorModeProps = {
   displayMode: DisplayMode
 }
 
+const INVENTORY_DRILL_SPOTS = [
+  { bet: 50, knownCount: 12, knownMode: 'value', pot: 100 },
+  { bet: 25, knownCount: 16, knownMode: 'value', pot: 75 },
+  { bet: 100, knownCount: 10, knownMode: 'value', pot: 100 },
+  { bet: 50, knownCount: 4, knownMode: 'bluff', pot: 100 },
+  { bet: 40, knownCount: 8, knownMode: 'bluff', pot: 60 },
+] as const
+
+type InventoryDrillSpot = (typeof INVENTORY_DRILL_SPOTS)[number]
+
 export function IgorMode({ displayMode }: IgorModeProps) {
   const [potInputMode, setPotInputMode] = useLocalStorageState<PotInputMode>(
     'pokermath.igor.pot-mode',
@@ -53,6 +64,10 @@ export function IgorMode({ displayMode }: IgorModeProps) {
   const [lineFlopBet, setLineFlopBet] = useLocalStorageState('pokermath.igor.line-flop-bet', 33)
   const [lineTurnBet, setLineTurnBet] = useLocalStorageState('pokermath.igor.line-turn-bet', 75)
   const [lineRiverBet, setLineRiverBet] = useLocalStorageState('pokermath.igor.line-river-bet', 125)
+  const [inventoryDrillIndex, setInventoryDrillIndex] = useState(0)
+  const [inventoryDrillGuess, setInventoryDrillGuess] = useState(4)
+  const [inventoryDrillChecked, setInventoryDrillChecked] = useState(false)
+  const [inventoryDrillStreak, setInventoryDrillStreak] = useState(0)
 
   const inventory = calculateIgorInventory(
     igorPot,
@@ -67,6 +82,20 @@ export function IgorMode({ displayMode }: IgorModeProps) {
   const activeLineSteps = linePlan.steps.filter((step) => step.active)
   const lastActiveLineStep = activeLineSteps[activeLineSteps.length - 1] ?? null
   const lineGrowthFactor = linePlan.finalPotIfCalled / linePlan.safeStartPot
+  const inventoryDrillSpot = INVENTORY_DRILL_SPOTS[inventoryDrillIndex] ?? INVENTORY_DRILL_SPOTS[0]
+  const inventoryDrillMath = calculateIgorInventory(
+    inventoryDrillSpot.pot,
+    inventoryDrillSpot.bet,
+    'clean',
+    inventoryDrillSpot.knownMode,
+    inventoryDrillSpot.knownCount,
+  )
+  const inventoryDrillAnswer =
+    inventoryDrillSpot.knownMode === 'value'
+      ? inventoryDrillMath.bluffCount
+      : inventoryDrillMath.valueCount
+  const inventoryDrillDifference = Math.abs(inventoryDrillAnswer - inventoryDrillGuess)
+  const inventoryDrillSolved = inventoryDrillDifference <= 0.5
 
   function switchPotInputMode(nextMode: PotInputMode) {
     if (nextMode === potInputMode) {
@@ -90,6 +119,34 @@ export function IgorMode({ displayMode }: IgorModeProps) {
     }
 
     setIgorBet(nextBet)
+  }
+
+  function getInventoryDrillAnswer(spot: InventoryDrillSpot) {
+    const spotMath = calculateIgorInventory(
+      spot.pot,
+      spot.bet,
+      'clean',
+      spot.knownMode,
+      spot.knownCount,
+    )
+    return spot.knownMode === 'value' ? spotMath.bluffCount : spotMath.valueCount
+  }
+
+  function checkInventoryDrill() {
+    setInventoryDrillChecked(true)
+    setInventoryDrillStreak((currentStreak) => (inventoryDrillSolved ? currentStreak + 1 : 0))
+  }
+
+  function nextInventoryDrillRound() {
+    const nextOptions = INVENTORY_DRILL_SPOTS.map((_, index) => index).filter(
+      (index) => index !== inventoryDrillIndex,
+    )
+    const nextIndex = nextOptions[Math.floor(Math.random() * nextOptions.length)] ?? 0
+    const nextSpot = INVENTORY_DRILL_SPOTS[nextIndex] ?? INVENTORY_DRILL_SPOTS[0]
+
+    setInventoryDrillIndex(nextIndex)
+    setInventoryDrillGuess(Math.round(getInventoryDrillAnswer(nextSpot)))
+    setInventoryDrillChecked(false)
   }
 
   const heroActions = [
@@ -382,6 +439,161 @@ export function IgorMode({ displayMode }: IgorModeProps) {
           содержит <strong>{formatShare(inventory.bluffShareTotal, displayMode)}</strong> блефов. И эта
           же цифра одновременно равна <strong>equity на колл</strong> против ставки.
         </p>
+
+        <div className="quick-drill-card igor-inventory-drill">
+          <div className="section-head compact">
+            <div>
+              <p className="kicker">Мини-дрилл</p>
+              <h3>Переведи value ↔ bluff без калькулятора</h3>
+            </div>
+            <p className="table-note">
+              Тренировка на главный river-шаблон: сначала находишь коэффициент, потом
+              умножаешь известную сторону диапазона.
+            </p>
+          </div>
+
+          <div className="summary-grid compact-summary">
+            <article className="result-card primary">
+              <p className="card-label">Спот</p>
+              <h3>
+                Банк {formatDecimal(inventoryDrillSpot.pot)}, ставка{' '}
+                {formatDecimal(inventoryDrillSpot.bet)}
+              </h3>
+              <p>
+                Известно{' '}
+                <strong>
+                  {formatDecimal(inventoryDrillSpot.knownCount)}{' '}
+                  {inventoryDrillSpot.knownMode === 'value' ? 'value' : 'bluff'}
+                </strong>
+                . Назови{' '}
+                {inventoryDrillSpot.knownMode === 'value'
+                  ? 'сколько bluff можно добавить'
+                  : 'сколько value нужно'}.
+              </p>
+            </article>
+            <article className="result-card">
+              <p className="card-label">Серия</p>
+              <h3>{formatInteger(inventoryDrillStreak)}</h3>
+              <p>Ответ принимается в пределах 0,5 комбо от точного числа.</p>
+            </article>
+          </div>
+
+          <div className="quick-drill-controls">
+            <EditableNumberField
+              ariaLabel="Inventory drill answer"
+              className="number-field compact-field"
+              inputMin={0}
+              label={
+                inventoryDrillSpot.knownMode === 'value'
+                  ? 'Твой ответ, bluff'
+                  : 'Твой ответ, value'
+              }
+              onValueChange={(value) => {
+                setInventoryDrillGuess(value)
+                if (inventoryDrillChecked) {
+                  setInventoryDrillChecked(false)
+                }
+              }}
+              sanitizeMin={0}
+              value={inventoryDrillGuess}
+            />
+
+            <div className="quick-drill-actions">
+              <button className="mode-chip active" onClick={checkInventoryDrill} type="button">
+                Проверить
+              </button>
+              <button className="mode-chip" onClick={nextInventoryDrillRound} type="button">
+                Новый спот
+              </button>
+            </div>
+          </div>
+
+          <p className="igor-summary">
+            Подсказка без спойлера:{' '}
+            {inventoryDrillSpot.knownMode === 'value' ? (
+              <>
+                для value сначала найди <strong>bluff на 1 value</strong> как
+                ставка / (банк + ставка).
+              </>
+            ) : (
+              <>
+                для bluff сначала найди <strong>value на 1 bluff</strong> как
+                (банк + ставка) / ставка.
+              </>
+            )}
+          </p>
+
+          {inventoryDrillChecked ? (
+            <article
+              className={
+                inventoryDrillSolved
+                  ? 'result-card quick-drill-result success'
+                  : 'result-card quick-drill-result'
+              }
+            >
+              <p className="card-label">{inventoryDrillSolved ? 'Попал' : 'Мимо, но близко'}</p>
+              <h3>{formatDecimal(inventoryDrillAnswer)}</h3>
+              <p>
+                Твой ответ: <strong>{formatDecimal(inventoryDrillGuess)}</strong>, ошибка около{' '}
+                <strong>{formatDecimal(inventoryDrillDifference)}</strong> комбо.
+              </p>
+              <div className="quick-drill-solution" aria-label="Решение value bluff">
+                <p className="card-label">Решение по алгоритму</p>
+                {inventoryDrillSpot.knownMode === 'value' ? (
+                  <ol>
+                    <li>
+                      Сначала считаем bluff на 1 value:{' '}
+                      <strong>
+                        {formatDecimal(inventoryDrillSpot.bet)} / (
+                        {formatDecimal(inventoryDrillSpot.pot)} +{' '}
+                        {formatDecimal(inventoryDrillSpot.bet)})
+                      </strong>
+                      .
+                    </li>
+                    <li>
+                      Коэффициент ={' '}
+                      <strong>{formatDecimal(inventoryDrillMath.bluffPerValue)}</strong>.
+                    </li>
+                    <li>
+                      Bluff = value × коэффициент ={' '}
+                      <strong>
+                        {formatDecimal(inventoryDrillSpot.knownCount)} ×{' '}
+                        {formatDecimal(inventoryDrillMath.bluffPerValue)} ={' '}
+                        {formatDecimal(inventoryDrillAnswer)}
+                      </strong>
+                      .
+                    </li>
+                  </ol>
+                ) : (
+                  <ol>
+                    <li>
+                      Сначала считаем value на 1 bluff:{' '}
+                      <strong>
+                        ({formatDecimal(inventoryDrillSpot.pot)} +{' '}
+                        {formatDecimal(inventoryDrillSpot.bet)}) /{' '}
+                        {formatDecimal(inventoryDrillSpot.bet)}
+                      </strong>
+                      .
+                    </li>
+                    <li>
+                      Коэффициент ={' '}
+                      <strong>{formatDecimal(inventoryDrillMath.valuePerBluff)}</strong>.
+                    </li>
+                    <li>
+                      Value = bluff × коэффициент ={' '}
+                      <strong>
+                        {formatDecimal(inventoryDrillSpot.knownCount)} ×{' '}
+                        {formatDecimal(inventoryDrillMath.valuePerBluff)} ={' '}
+                        {formatDecimal(inventoryDrillAnswer)}
+                      </strong>
+                      .
+                    </li>
+                  </ol>
+                )}
+              </div>
+            </article>
+          ) : null}
+        </div>
       </section>
 
       <section className="igor-stack jump-target" id="igor-tools">

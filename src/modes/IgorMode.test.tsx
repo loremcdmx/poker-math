@@ -31,6 +31,19 @@ describe('IgorMode', () => {
     expect(screen.getAllByText('581').length).toBeGreaterThan(0)
   })
 
+  it('checks the value bluff drill and reveals the solution steps', async () => {
+    const user = userEvent.setup()
+
+    render(<IgorMode displayMode="percent" />)
+
+    await user.click(screen.getByRole('button', { name: 'Проверить' }))
+
+    const solution = screen.getByLabelText('Решение value bluff')
+    expect(solution).toBeInTheDocument()
+    expect(solution).toHaveTextContent(/50 \/ \(100 \+ 50\)/i)
+    expect(solution).toHaveTextContent(/12 × 0,33 = 4/i)
+  })
+
   it('explains the normalized sizing reference instead of a mysterious bank 100 mode', () => {
     render(<IgorMode displayMode="percent" />)
 

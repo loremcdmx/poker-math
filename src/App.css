@@ -2277,6 +2277,14 @@ tbody tr:hover td {
   margin-top: 24px;
 }
 
+.combo-outs-drill,
+.igor-inventory-drill {
+  padding: 20px;
+  border: 1px solid rgba(26, 82, 66, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 252, 244, 0.72);
+}
+
 .quick-drill-controls,
 .quick-drill-actions {
   display: flex;

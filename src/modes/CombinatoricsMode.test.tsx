@@ -44,4 +44,18 @@ describe('CombinatoricsMode', () => {
     expect(screen.getByRole('slider', { name: 'Outs count' })).toHaveValue('9')
     expect(screen.getByText('FD + стрит-дро')).toBeInTheDocument()
   })
+
+  it('checks the outs drill and reveals the solution steps', async () => {
+    const user = userEvent.setup()
+
+    render(<CombinatoricsMode displayMode="percent" />)
+
+    await user.click(screen.getByRole('button', { name: 'Проверить' }))
+
+    const solution = screen.getByLabelText('Решение по аутам')
+    expect(solution).toBeInTheDocument()
+    expect(solution).toHaveTextContent(/47 − 9/i)
+    expect(solution).toHaveTextContent(/Equity = 1 − промах/i)
+    expect(solution).toHaveTextContent(/35%/)
+  })
 })

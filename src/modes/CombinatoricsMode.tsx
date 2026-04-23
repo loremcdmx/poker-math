@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import { formatInteger, formatShare } from '../lib/formatters'
 import {
@@ -40,6 +41,16 @@ const OUTS_PRESETS: Array<{ outs: number; label: string }> = [
   { outs: 15, label: 'FD + стрит-дро' },
 ]
 
+const OUTS_DRILL_SPOTS = [
+  { outs: 4, street: 'turn', title: 'Гатшот на тёрне' },
+  { outs: 8, street: 'flop', title: 'OESD на флопе' },
+  { outs: 9, street: 'flop', title: 'Флеш-дро на флопе' },
+  { outs: 12, street: 'turn', title: 'Сильное дро на тёрне' },
+  { outs: 15, street: 'flop', title: 'Комбо-дро на флопе' },
+] as const
+
+type OutsDrillSpot = (typeof OUTS_DRILL_SPOTS)[number]
+
 function flopToRiverEquity(outs: number) {
   if (outs <= 0) return 0
   const clampedOuts = Math.min(outs, 47)
@@ -53,6 +64,14 @@ function turnToRiverEquity(outs: number) {
   if (outs <= 0) return 0
   const clampedOuts = Math.min(outs, 46)
   return clampedOuts / 46
+}
+
+function getOutsDrillEquity(spot: OutsDrillSpot) {
+  return spot.street === 'flop' ? flopToRiverEquity(spot.outs) : turnToRiverEquity(spot.outs)
+}
+
+function getOutsDrillRule(spot: OutsDrillSpot) {
+  return Math.min(100, spot.outs * (spot.street === 'flop' ? 4 : 2))
 }
 
 type DragMode = 'add' | 'remove' | null
@@ -130,6 +149,10 @@ export function CombinatoricsMode({ displayMode }: CombinatoricsModeProps) {
   const boardCardSet = new Set(analysis.board)
   const firstEmptyBoardSlot = boardCards.indexOf('')
   const [outs, setOuts] = useState(9)
+  const [outsDrillIndex, setOutsDrillIndex] = useState(2)
+  const [outsDrillGuess, setOutsDrillGuess] = useState(36)
+  const [outsDrillChecked, setOutsDrillChecked] = useState(false)
+  const [outsDrillStreak, setOutsDrillStreak] = useState(0)
   const safeOuts = Math.max(0, Math.min(20, Math.round(outs)))
   const flopEquity = flopToRiverEquity(safeOuts)
   const turnEquity = turnToRiverEquity(safeOuts)
@@ -137,6 +160,11 @@ export function CombinatoricsMode({ displayMode }: CombinatoricsModeProps) {
   const turnRule = Math.min(100, safeOuts * 2)
   const flopDelta = flopRule - flopEquity * 100
   const turnDelta = turnRule - turnEquity * 100
+  const outsDrillSpot = OUTS_DRILL_SPOTS[outsDrillIndex] ?? OUTS_DRILL_SPOTS[0]
+  const outsDrillEquity = getOutsDrillEquity(outsDrillSpot)
+  const outsDrillRule = getOutsDrillRule(outsDrillSpot)
+  const outsDrillDifference = Math.abs(outsDrillEquity * 100 - outsDrillGuess)
+  const outsDrillSolved = outsDrillDifference <= 2
 
   const heroActions = [
     { href: '#combo-guide', label: 'Шпаргалка' },
@@ -248,6 +276,23 @@ export function CombinatoricsMode({ displayMode }: CombinatoricsModeProps) {
 
   function clearBoard() {
     setBoardCards(['', '', '', '', ''])
+  }
+
+  function checkOutsDrill() {
+    setOutsDrillChecked(true)
+    setOutsDrillStreak((currentStreak) => (outsDrillSolved ? currentStreak + 1 : 0))
+  }
+
+  function nextOutsDrillRound() {
+    const nextOptions = OUTS_DRILL_SPOTS.map((_, index) => index).filter(
+      (index) => index !== outsDrillIndex,
+    )
+    const nextIndex = nextOptions[Math.floor(Math.random() * nextOptions.length)] ?? 0
+    const nextSpot = OUTS_DRILL_SPOTS[nextIndex] ?? OUTS_DRILL_SPOTS[0]
+
+    setOutsDrillIndex(nextIndex)
+    setOutsDrillGuess(getOutsDrillRule(nextSpot))
+    setOutsDrillChecked(false)
   }
 
   return (
@@ -453,6 +498,145 @@ export function CombinatoricsMode({ displayMode }: CombinatoricsModeProps) {
               Формулы: флоп → ривер = 1 − C(47−outs, 2)/C(47, 2), тёрн → ривер = outs / 46.
               Правило подводит при больших значениях (≥ 13 аутов) — там пересчитывай точно.
             </p>
+
+            <div className="quick-drill-card combo-outs-drill">
+              <div className="section-head compact">
+                <div>
+                  <p className="kicker">Мини-дрилл</p>
+                  <h3>Прикинь equity по аутам</h3>
+                </div>
+                <p className="table-note">
+                  Сначала дай быстрый ответ по правилу 4/2, затем проверь точную формулу.
+                </p>
+              </div>
+
+              <div className="summary-grid compact-summary">
+                <article className="result-card primary">
+                  <p className="card-label">Спот</p>
+                  <h3>{outsDrillSpot.title}</h3>
+                  <p>
+                    {formatInteger(outsDrillSpot.outs)}{' '}
+                    {outsDrillSpot.outs >= 2 && outsDrillSpot.outs <= 4
+                      ? 'аута'
+                      : 'аутов'}{' '}
+                    {outsDrillSpot.street === 'flop' ? 'с флопа до ривера' : 'с тёрна до ривера'}.
+                  </p>
+                </article>
+                <article className="result-card">
+                  <p className="card-label">Серия</p>
+                  <h3>{formatInteger(outsDrillStreak)}</h3>
+                  <p>Попадание считается в пределах 2 п.п. от точной формулы.</p>
+                </article>
+              </div>
+
+              <div className="quick-drill-controls">
+                <EditableNumberField
+                  ariaLabel="Outs equity drill guess"
+                  className="number-field compact-field"
+                  inputMax={100}
+                  inputMin={0}
+                  label="Твой ответ, %"
+                  onValueChange={(value) => {
+                    setOutsDrillGuess(value)
+                    if (outsDrillChecked) {
+                      setOutsDrillChecked(false)
+                    }
+                  }}
+                  sanitizeMax={100}
+                  sanitizeMin={0}
+                  value={outsDrillGuess}
+                />
+
+                <div className="quick-drill-actions">
+                  <button className="mode-chip active" onClick={checkOutsDrill} type="button">
+                    Проверить
+                  </button>
+                  <button className="mode-chip" onClick={nextOutsDrillRound} type="button">
+                    Новый спот
+                  </button>
+                </div>
+              </div>
+
+              <p className="igor-summary">
+                Подсказка без спойлера:{' '}
+                {outsDrillSpot.street === 'flop' ? (
+                  <>
+                    на флопе сначала умножь ауты на <strong>4</strong>, потом проверь
+                    через две карты до ривера.
+                  </>
+                ) : (
+                  <>
+                    на тёрне сначала умножь ауты на <strong>2</strong>, потом проверь
+                    через одну карту.
+                  </>
+                )}
+              </p>
+
+              {outsDrillChecked ? (
+                <article
+                  className={
+                    outsDrillSolved
+                      ? 'result-card quick-drill-result success'
+                      : 'result-card quick-drill-result'
+                  }
+                >
+                  <p className="card-label">{outsDrillSolved ? 'Попал' : 'Мимо, но близко'}</p>
+                  <h3>{formatShare(outsDrillEquity, 'percent', 12)}</h3>
+                  <p>
+                    Твой ответ: <strong>{formatShare(outsDrillGuess / 100, 'percent')}</strong>,
+                    ошибка около <strong>{outsDrillDifference.toFixed(1)} п.п.</strong>.
+                    Быстрое правило даёт <strong>{formatInteger(outsDrillRule)}%</strong>.
+                  </p>
+                  <div className="quick-drill-solution" aria-label="Решение по аутам">
+                    <p className="card-label">Решение по алгоритму</p>
+                    {outsDrillSpot.street === 'flop' ? (
+                      <ol>
+                        <li>
+                          На флопе до ривера две карты, поэтому сначала считаем шанс не
+                          попасть: <strong>47 − {formatInteger(outsDrillSpot.outs)}</strong>{' '}
+                          на тёрне и <strong>46 − {formatInteger(outsDrillSpot.outs)}</strong>{' '}
+                          на ривере.
+                        </li>
+                        <li>
+                          Вероятность промаха:{' '}
+                          <strong>
+                            ({formatInteger(47 - outsDrillSpot.outs)} / 47) × (
+                            {formatInteger(46 - outsDrillSpot.outs)} / 46)
+                          </strong>
+                          .
+                        </li>
+                        <li>
+                          Equity = 1 − промах ={' '}
+                          <strong>{formatShare(outsDrillEquity, 'percent', 12)}</strong>.
+                          Правило 4/2 даёт ориентир{' '}
+                          <strong>{formatInteger(outsDrillRule)}%</strong>.
+                        </li>
+                      </ol>
+                    ) : (
+                      <ol>
+                        <li>
+                          На тёрне осталась одна карта, в колоде условно{' '}
+                          <strong>46</strong> неизвестных карт.
+                        </li>
+                        <li>
+                          Equity = outs / 46 ={' '}
+                          <strong>
+                            {formatInteger(outsDrillSpot.outs)} / 46
+                          </strong>
+                          .
+                        </li>
+                        <li>
+                          Точный ответ:{' '}
+                          <strong>{formatShare(outsDrillEquity, 'percent', 12)}</strong>.
+                          Быстрое правило 2× даёт{' '}
+                          <strong>{formatInteger(outsDrillRule)}%</strong>.
+                        </li>
+                      </ol>
+                    )}
+                  </div>
+                </article>
+              ) : null}
+            </div>
           </section>
 
           <section className="surface jump-target" id="combo-grid">
