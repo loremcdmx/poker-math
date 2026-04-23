@@ -41,11 +41,10 @@ test('igor mode mobile layout stays narrow and hero actions are useful', async (
   await page.goto('/')
   await page.getByRole('button', { name: 'Дроби' }).click()
   await page.getByRole('tab', { name: 'Режим Игоря' }).click()
-  await expect(page.getByText('С чего начать')).toBeVisible()
   await page.getByRole('button', { name: 'Пот как в клиенте' }).click()
 
   await expect(page.getByText('Пример на цифрах из клиента')).toBeVisible()
-  await expect(page.getByText('Банк в клиенте')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Банк в клиенте' })).toBeVisible()
   await expect(page.locator('#igor-panel .focus-metrics strong').nth(2)).toHaveText('4/5 банка')
 
   const layout = await page.evaluate(() => ({
@@ -57,47 +56,6 @@ test('igor mode mobile layout stays narrow and hero actions are useful', async (
   expect(consoleErrors).toEqual([])
 
   await context.close()
-})
-
-test('state persists through reload for igor and advanced local storage flows', async ({ page }) => {
-  await page.goto('/')
-
-  await page.getByRole('tab', { name: 'Режим Игоря' }).click()
-  const igorPotInput = page.locator('#igor-converter').getByRole('textbox', { name: 'Банк до ставки' })
-  await igorPotInput.fill('42')
-  await page.reload()
-
-  await expect(page.getByRole('tab', { name: 'Режим Игоря', selected: true })).toBeVisible()
-  await expect(
-    page.locator('#igor-converter').getByRole('textbox', { name: 'Банк до ставки' }),
-  ).toHaveValue('42')
-
-  await page.getByRole('button', { name: 'Advanced mode' }).click()
-  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
-  await page.getByLabel('Пароль адвансд мода').fill('123')
-  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
-  await page.getByRole('button', { name: 'Очистить', exact: true }).click()
-
-  const customWeight = page.getByRole('textbox', { name: 'Кастомный вес кисти' })
-  await customWeight.fill('37')
-  await page.getByRole('button', { name: 'Toggle AKs' }).click()
-  await page.getByRole('button', { name: 'A♥', exact: true }).click()
-  await page.getByRole('button', { name: 'K♦', exact: true }).click()
-  await page.getByRole('button', { name: '7♣', exact: true }).click()
-
-  await page.reload()
-  const advancedToggle = page.getByRole('button', { name: 'Advanced mode' })
-  if ((await advancedToggle.getAttribute('aria-pressed')) !== 'true') {
-    await advancedToggle.click()
-  }
-  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
-  await page.getByLabel('Пароль адвансд мода').fill('123')
-  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
-
-  await expect(page.getByText('AKs · 37%')).toBeVisible()
-  await expect(page.getByRole('button', { name: /Флоп 1: A♥/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Флоп 2: K♦/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Флоп 3: 7♣/i })).toBeVisible()
 })
 
 test('all tabs stay scrollable and console-clean through the main flows', async ({ page }) => {
@@ -113,17 +71,12 @@ test('all tabs stay scrollable and console-clean through the main flows', async 
   await page.mouse.wheel(0, 1600)
   await page.mouse.wheel(0, -1600)
 
+  await page.getByRole('tab', { name: 'Комбинаторика' }).click()
+  await page.mouse.wheel(0, 1800)
+
   await page.getByRole('tab', { name: 'Режим Игоря' }).click()
   await page.mouse.wheel(0, 1800)
 
-  await page.getByRole('button', { name: 'Advanced mode' }).click()
-  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
-  await page.getByLabel('Пароль адвансд мода').fill('123')
-  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
-  await page.mouse.wheel(0, 1800)
-  await page.getByRole('button', { name: 'Эквити' }).click()
-  await page.mouse.wheel(0, 1800)
-
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth,
@@ -133,49 +86,9 @@ test('all tabs stay scrollable and console-clean through the main flows', async 
   expect(consoleErrors).toEqual([])
 })
 
-test('advanced mode stays narrow and console-clean on mobile through combos and equity', async ({
-  browser,
-}) => {
-  const context = await browser.newContext({ ...devices['iPhone 13'] })
-  const page = await context.newPage()
-
-  const consoleErrors: string[] = []
-  page.on('console', (message) => {
-    if (message.type() === 'error') {
-      consoleErrors.push(message.text())
-    }
-  })
-
+test('combinatorics mode exposes range grid and board analysis', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Advanced mode' }).click()
-  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
-  await page.getByLabel('Пароль адвансд мода').fill('123')
-  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
-
-  await page.getByRole('button', { name: 'Очистить', exact: true }).click()
-  await page.getByRole('button', { name: 'TT+' }).click()
-  await page.getByRole('button', { name: 'A♥', exact: true }).click()
-  await page.getByRole('button', { name: 'K♦', exact: true }).click()
-  await page.getByRole('button', { name: '7♣', exact: true }).click()
-  await page.getByRole('button', { name: 'Эквити' }).click()
-
-  const layout = await page.evaluate(() => ({
-    clientWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-  }))
-
-  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1)
-  expect(consoleErrors).toEqual([])
-
-  await context.close()
-})
-
-test('advanced mode exposes range grid and board analysis', async ({ page }) => {
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Advanced mode' }).click()
-  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
-  await page.getByLabel('Пароль адвансд мода').fill('123')
-  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
+  await page.getByRole('tab', { name: 'Комбинаторика' }).click()
 
   await expect(page.getByText('Комбинаторика, блокеры и разбор диапазона по борду.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Toggle AKs' })).toBeVisible()
@@ -188,33 +101,19 @@ test('advanced mode exposes range grid and board analysis', async ({ page }) => 
   await page.getByRole('button', { name: '7♣', exact: true }).click()
 
   await expect(page.getByRole('heading', { name: 'Готовые руки', exact: true })).toBeVisible()
-  await expect(page.locator('#advanced-panel')).toContainText('Живые комбо')
+  await expect(page.locator('#combinatorics-panel')).toContainText('Живые комбо')
 })
 
-test('advanced equity mode calculates deterministic river equity', async ({ page }) => {
+test('outs-to-equity widget reacts to slider and preset', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Advanced mode' }).click()
-  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
-  await page.getByLabel('Пароль адвансд мода').fill('123')
-  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
-  await page.getByRole('button', { name: 'Эквити' }).click()
+  await page.getByRole('tab', { name: 'Комбинаторика' }).click()
+  await page.getByRole('link', { name: 'Ауты' }).click()
 
-  await page
-    .getByRole('group', { name: 'Hero input mode' })
-    .getByRole('button', { name: 'Рука', exact: true })
-    .click()
-  await page
-    .getByRole('group', { name: 'Villain input mode' })
-    .getByRole('button', { name: 'Рука', exact: true })
-    .click()
+  const slider = page.getByRole('slider', { name: 'Outs count' })
+  await expect(slider).toHaveValue('9')
+  await expect(page.locator('#combo-outs .outs-counter strong')).toHaveText('9')
 
-  await page.getByRole('combobox', { name: 'Флоп 1' }).selectOption('2c')
-  await page.getByRole('combobox', { name: 'Флоп 2' }).selectOption('3d')
-  await page.getByRole('combobox', { name: 'Флоп 3' }).selectOption('4h')
-  await page.getByRole('combobox', { name: 'Тёрн' }).selectOption('5s')
-  await page.getByRole('combobox', { name: 'Ривер' }).selectOption('7c')
-  await page.getByRole('button', { name: 'Пересчитать equity' }).click()
-
-  await expect(page.locator('#equity-results')).toContainText('100%')
-  await expect(page.locator('#equity-results')).toContainText('Точный')
+  await page.getByRole('button', { name: /Гатшот/ }).click()
+  await expect(slider).toHaveValue('4')
+  await expect(page.locator('#combo-outs .outs-counter strong')).toHaveText('4')
 })

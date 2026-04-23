@@ -18,13 +18,6 @@ type ScrollPerfMetrics = {
   slowFrameRatio: number
 }
 
-async function unlockAdvancedMode(page: Page) {
-  await page.getByRole('button', { name: 'Advanced mode' }).click()
-  await page.getByRole('tab', { name: 'Адвансд мод' }).click()
-  await page.getByLabel('Пароль адвансд мода').fill('123')
-  await page.getByRole('button', { name: 'Открыть адвансд' }).click()
-}
-
 async function collectScrollPerf(
   page: Page,
   panelSelector: string,
@@ -173,15 +166,10 @@ test('quick and igor tabs keep scroll performance guardrails', async ({ page }) 
   assertScrollPerf(igorMetrics)
 })
 
-test('advanced tab keeps scroll performance guardrails after unlock', async ({ page }) => {
+test('combinatorics tab keeps scroll performance guardrails', async ({ page }) => {
   await page.goto('/')
-  await unlockAdvancedMode(page)
+  await page.getByRole('tab', { name: 'Комбинаторика' }).click()
 
-  const combinatoricsMetrics = await collectScrollPerf(page, '#advanced-panel')
+  const combinatoricsMetrics = await collectScrollPerf(page, '#combinatorics-panel')
   assertScrollPerf(combinatoricsMetrics)
-
-  await page.getByRole('button', { name: 'Эквити' }).click()
-
-  const equityMetrics = await collectScrollPerf(page, '#advanced-panel')
-  assertScrollPerf(equityMetrics)
 })
