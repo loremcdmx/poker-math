@@ -39,4 +39,38 @@ describe('App', () => {
     expect(quickTab).toHaveFocus()
     expect(quickTab).toHaveAttribute('aria-selected', 'true')
   })
+
+  it('does not expose advanced tab from persisted storage when the feature flag is off', () => {
+    const storedValues = new Map<string, string>([
+      ['pokermath.advanced.toggle', 'true'],
+      ['pokermath.app.mode', '"advanced"'],
+    ])
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        clear: () => storedValues.clear(),
+        getItem: (key: string) => storedValues.get(key) ?? null,
+        key: (index: number) => Array.from(storedValues.keys())[index] ?? null,
+        get length() {
+          return storedValues.size
+        },
+        removeItem: (key: string) => {
+          storedValues.delete(key)
+        },
+        setItem: (key: string, value: string) => {
+          storedValues.set(key, value)
+        },
+      } satisfies Storage,
+    })
+
+    render(<App />)
+
+    expect(screen.queryByRole('tab', { name: 'Адвансд мод' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Advanced mode' })).toBeNull()
+    expect(screen.getByRole('tab', { name: 'Быстрый калькулятор' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+  })
 })

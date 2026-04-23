@@ -47,12 +47,15 @@ const presetButtons = [
   { label: 'Broadways', preset: 'broadways' as const },
   { label: 'Axs', preset: 'axs' as const },
   { label: '99+', preset: '99plus' as const },
-  { label: 'SC', preset: 'suited_connectors' as const },
+  { label: 'Suited connectors', preset: 'suited_connectors' as const },
 ] as const
 
 type EquityModeProps = {
   displayMode: DisplayMode
   embedded?: boolean
+  initialBoardCards?: Array<CardCode | ''>
+  initialHeroMode?: EquityInputMode
+  initialHeroRange?: RangeSelectionWeights
 }
 
 type EquityWorkerResponse = {
@@ -150,13 +153,19 @@ function countSelectedRangeCells(selection: RangeSelectionWeights) {
   return listSelectedRangeCells(selection).length
 }
 
-export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
-  const [heroMode, setHeroMode] = useState<EquityInputMode>('hand')
+export function EquityMode({
+  displayMode,
+  embedded = false,
+  initialBoardCards,
+  initialHeroMode = 'hand',
+  initialHeroRange,
+}: EquityModeProps) {
+  const [heroMode, setHeroMode] = useState<EquityInputMode>(initialHeroMode)
   const [villainMode, setVillainMode] = useState<EquityInputMode>('range')
   const [heroHand, setHeroHand] = useState<[CardCode | '', CardCode | '']>(['Ah', 'Ad'])
   const [villainHand, setVillainHand] = useState<[CardCode | '', CardCode | '']>(['Kh', 'Kd'])
   const [heroRange, setHeroRange] = useState<RangeSelectionWeights>(() =>
-    getPresetRangeWeights('99plus'),
+    initialHeroRange === undefined ? getPresetRangeWeights('99plus') : { ...initialHeroRange },
   )
   const [villainRange, setVillainRange] = useState<RangeSelectionWeights>(() => ({
     ...getPresetRangeWeights('broadways'),
@@ -164,7 +173,9 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
   }))
   const [heroBrushWeight, setHeroBrushWeight] = useState<number>(1)
   const [villainBrushWeight, setVillainBrushWeight] = useState<number>(1)
-  const [boardCards, setBoardCards] = useState<Array<CardCode | ''>>(['', '', '', '', ''])
+  const [boardCards, setBoardCards] = useState<Array<CardCode | ''>>(() =>
+    initialBoardCards === undefined ? ['', '', '', '', ''] : [...initialBoardCards],
+  )
   const [iterations, setIterations] = useState(4000)
   const [isPending, setIsPending] = useState(false)
   const [isStale, setIsStale] = useState(false)
@@ -242,6 +253,8 @@ export function EquityMode({ displayMode, embedded = false }: EquityModeProps) {
   }, [])
 
   function markStale() {
+    requestIdRef.current += 1
+    setIsPending(false)
     setIsStale(true)
   }
 

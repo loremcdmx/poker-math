@@ -180,45 +180,30 @@ function hasStraight(values: number[]) {
   return false
 }
 
-function hasOpenEndedStraightDraw(values: number[]) {
+function getStraightDrawCompleters(values: number[]) {
   const uniqueValues = Array.from(new Set(values))
   const lowAwareValues = uniqueValues.includes(14) ? [1, ...uniqueValues] : uniqueValues
   const valueSet = new Set(lowAwareValues)
+  const completers = new Set<number>()
 
-  for (let start = 1; start <= 11; start += 1) {
-    if (
-      valueSet.has(start) &&
-      valueSet.has(start + 1) &&
-      valueSet.has(start + 2) &&
-      valueSet.has(start + 3)
-    ) {
-      return true
+  for (let start = 1; start <= 10; start += 1) {
+    const windowValues = [start, start + 1, start + 2, start + 3, start + 4]
+    const missingValues = windowValues.filter((value) => !valueSet.has(value))
+
+    if (missingValues.length === 1) {
+      completers.add(missingValues[0])
     }
   }
 
-  return false
+  return completers
+}
+
+function hasOpenEndedStraightDraw(values: number[]) {
+  return getStraightDrawCompleters(values).size >= 2
 }
 
 function hasGutshot(values: number[]) {
-  const uniqueValues = Array.from(new Set(values))
-  const lowAwareValues = uniqueValues.includes(14) ? [1, ...uniqueValues] : uniqueValues
-  const valueSet = new Set(lowAwareValues)
-
-  for (let start = 1; start <= 10; start += 1) {
-    let matches = 0
-
-    for (let offset = 0; offset < 5; offset += 1) {
-      if (valueSet.has(start + offset)) {
-        matches += 1
-      }
-    }
-
-    if (matches === 4) {
-      return true
-    }
-  }
-
-  return false
+  return getStraightDrawCompleters(values).size === 1
 }
 
 function getMadeHandCategory(cards: CardCode[]): MadeHandCategory {
@@ -391,7 +376,7 @@ function describePairTexture(board: CardCode[]): BoardTextureTag {
 
   if ((rankCounts[0] ?? 0) >= 3) {
     return {
-      description: 'На борде уже три одинаковых ранга, диапазоны резко поляризуются по кикерам.',
+      description: 'На борде уже три карты одного достоинства, диапазоны резко поляризуются по кикерам.',
       label: 'трипс на борде',
     }
   }

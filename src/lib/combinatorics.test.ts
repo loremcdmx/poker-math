@@ -31,6 +31,16 @@ describe('combinatorics', () => {
     expect(analysis.drawSummaries.find((summary) => summary.category === 'combo_draw')?.count).toBe(1)
   })
 
+  it('classifies wheel and broadway edge draws as one-card gutshots, not OESD', () => {
+    const wheelAnalysis = analyzeRange({ A4s: 1 }, ['2h', '3d', '9c', '', ''])
+    const broadwayAnalysis = analyzeRange({ QJs: 1 }, ['Ah', 'Kd', '2c', '', ''])
+
+    expect(wheelAnalysis.drawSummaries.find((summary) => summary.category === 'oesd')).toBeUndefined()
+    expect(broadwayAnalysis.drawSummaries.find((summary) => summary.category === 'oesd')).toBeUndefined()
+    expect(wheelAnalysis.drawSummaries.find((summary) => summary.category === 'gutshot')?.count).toBe(4)
+    expect(broadwayAnalysis.drawSummaries.find((summary) => summary.category === 'gutshot')?.count).toBe(4)
+  })
+
   it('supports weighted ranges and reports board texture summaries', () => {
     const analysis = analyzeRange({ AKs: 0.5, AKo: 0.25 }, ['Ah', 'Kd', '7c', '', ''])
 

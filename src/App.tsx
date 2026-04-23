@@ -10,7 +10,7 @@ type AppMode = 'quick' | 'igor' | 'advanced'
 
 const BASE_APP_MODES: AppMode[] = ['quick', 'igor']
 const ADVANCED_MODE_ENABLED = import.meta.env.VITE_ENABLE_ADVANCED_MODE === '1'
-const ADVANCED_MODE_PASSWORD = import.meta.env.VITE_ADVANCED_MODE_PASSWORD ?? '123'
+const ADVANCED_MODE_PASSWORD = import.meta.env.VITE_ADVANCED_MODE_PASSWORD
 
 function App() {
   const [appMode, setAppMode] = useLocalStorageState<AppMode>('pokermath.app.mode', 'quick')
@@ -34,6 +34,7 @@ function App() {
     () => (advancedVisible ? [...BASE_APP_MODES, 'advanced'] : BASE_APP_MODES),
     [advancedVisible],
   )
+  const activeAppMode = visibleModes.includes(appMode) ? appMode : 'quick'
 
   useEffect(() => {
     if (!visibleModes.includes(appMode)) {
@@ -63,7 +64,7 @@ function App() {
     setAdvMode((previousValue) => {
       const nextValue = !previousValue
 
-      if (!nextValue && appMode === 'advanced') {
+      if (!nextValue && activeAppMode === 'advanced') {
         setAppMode('quick')
       }
 
@@ -73,6 +74,11 @@ function App() {
 
   function handleAdvancedUnlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (ADVANCED_MODE_PASSWORD === undefined || ADVANCED_MODE_PASSWORD === '') {
+      setAdvancedPasswordError('Пароль адвансд мода не настроен.')
+      return
+    }
 
     if (advancedPassword === ADVANCED_MODE_PASSWORD) {
       setAdvancedUnlocked(true)
@@ -89,8 +95,8 @@ function App() {
         <div className="mode-switch surface" role="tablist" aria-label="App mode">
           <button
             aria-controls="quick-panel"
-            aria-selected={appMode === 'quick'}
-            className={appMode === 'quick' ? 'mode-switch-item active' : 'mode-switch-item'}
+            aria-selected={activeAppMode === 'quick'}
+            className={activeAppMode === 'quick' ? 'mode-switch-item active' : 'mode-switch-item'}
             id="quick-tab"
             onClick={() => setAppMode('quick')}
             onKeyDown={(event) => handleModeTabKeyDown(event, 'quick')}
@@ -98,15 +104,15 @@ function App() {
               tabRefs.current.quick = node
             }}
             role="tab"
-            tabIndex={appMode === 'quick' ? 0 : -1}
+            tabIndex={activeAppMode === 'quick' ? 0 : -1}
             type="button"
           >
             Быстрый калькулятор
           </button>
           <button
             aria-controls="igor-panel"
-            aria-selected={appMode === 'igor'}
-            className={appMode === 'igor' ? 'mode-switch-item active' : 'mode-switch-item'}
+            aria-selected={activeAppMode === 'igor'}
+            className={activeAppMode === 'igor' ? 'mode-switch-item active' : 'mode-switch-item'}
             id="igor-tab"
             onClick={() => setAppMode('igor')}
             onKeyDown={(event) => handleModeTabKeyDown(event, 'igor')}
@@ -114,16 +120,16 @@ function App() {
               tabRefs.current.igor = node
             }}
             role="tab"
-            tabIndex={appMode === 'igor' ? 0 : -1}
+            tabIndex={activeAppMode === 'igor' ? 0 : -1}
             type="button"
           >
             Режим Игоря
           </button>
-          {advMode ? (
+          {advancedVisible ? (
             <button
               aria-controls="advanced-panel"
-              aria-selected={appMode === 'advanced'}
-              className={appMode === 'advanced' ? 'mode-switch-item active' : 'mode-switch-item'}
+              aria-selected={activeAppMode === 'advanced'}
+              className={activeAppMode === 'advanced' ? 'mode-switch-item active' : 'mode-switch-item'}
               id="advanced-tab"
               onClick={() => setAppMode('advanced')}
               onKeyDown={(event) => handleModeTabKeyDown(event, 'advanced')}
@@ -131,7 +137,7 @@ function App() {
                 tabRefs.current.advanced = node
               }}
               role="tab"
-              tabIndex={appMode === 'advanced' ? 0 : -1}
+              tabIndex={activeAppMode === 'advanced' ? 0 : -1}
               type="button"
             >
               Адвансд мод
@@ -168,7 +174,7 @@ function App() {
         </div>
       </div>
 
-      {appMode === 'quick' ? (
+      {activeAppMode === 'quick' ? (
         <section aria-labelledby="quick-tab" id="quick-panel" role="tabpanel" tabIndex={0}>
           <QuickMode
             betPercent={betPercent}
@@ -176,7 +182,7 @@ function App() {
             onBetPercentChange={setBetPercent}
           />
         </section>
-      ) : appMode === 'igor' ? (
+      ) : activeAppMode === 'igor' ? (
         <section aria-labelledby="igor-tab" id="igor-panel" role="tabpanel" tabIndex={0}>
           <IgorMode displayMode={displayMode} />
         </section>
