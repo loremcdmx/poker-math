@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   approximateFraction,
+  buildMultiStreetLine,
   calculateBluffWithEquity,
   calculateIgorInventory,
   calculateMetrics,
@@ -56,5 +57,16 @@ describe('poker math helpers', () => {
     expect(result.noFoldEquity).toBeCloseTo(0.25, 6)
     expect(result.feWithEquity).toBe(0)
     expect(result.savedFe).toBeCloseTo(1 / 3, 6)
+  })
+
+  it('builds a multi-street line from percentage bets', () => {
+    const line = buildMultiStreetLine(40, [33, 75, 125])
+
+    expect(line.steps[0].betSize).toBeCloseTo(13.2, 6)
+    expect(line.steps[0].potAfterCall).toBeCloseTo(66.4, 6)
+    expect(line.steps[1].betSize).toBeCloseTo(49.8, 6)
+    expect(line.steps[2].betSize).toBeCloseTo(207.5, 6)
+    expect(line.finalPotIfCalled).toBeCloseTo(581, 6)
+    expect(line.totalInvestment).toBeCloseTo(270.5, 6)
   })
 })

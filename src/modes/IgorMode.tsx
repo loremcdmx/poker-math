@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import {
@@ -8,8 +7,10 @@ import {
   formatShare,
   formatSheetPercent,
   formatSheetRoundedPercent,
+  pluralizeRu,
 } from '../lib/formatters'
 import {
+  buildMultiStreetLine,
   calculateBluffWithEquity,
   calculateIgorInventory,
   calculateMetrics,
@@ -20,6 +21,7 @@ import {
   type PotInputMode,
   sanitizeNumber,
 } from '../lib/pokerMath'
+import { useLocalStorageState } from '../lib/storage'
 
 function scrollToSection(sectionId: string) {
   document.getElementById(sectionId)?.scrollIntoView({ behavior: 'auto', block: 'start' })
@@ -30,17 +32,27 @@ type IgorModeProps = {
 }
 
 export function IgorMode({ displayMode }: IgorModeProps) {
-  const [potInputMode, setPotInputMode] = useState<PotInputMode>('clean')
-  const [knownMode, setKnownMode] = useState<IgorInventoryMode>('value')
-  const [igorPot, setIgorPot] = useState(24)
-  const [igorBet, setIgorBet] = useState(19)
-  const [knownCount, setKnownCount] = useState(88)
-  const [bluffPot, setBluffPot] = useState(100)
-  const [bluffBet, setBluffBet] = useState(50)
-  const [bluffEquity, setBluffEquity] = useState(25)
-  const [raisePot, setRaisePot] = useState(8)
-  const [raiseBet, setRaiseBet] = useState(5)
-  const [raiseTotal, setRaiseTotal] = useState(23)
+  const [potInputMode, setPotInputMode] = useLocalStorageState<PotInputMode>(
+    'pokermath.igor.pot-mode',
+    'clean',
+  )
+  const [knownMode, setKnownMode] = useLocalStorageState<IgorInventoryMode>(
+    'pokermath.igor.known-mode',
+    'value',
+  )
+  const [igorPot, setIgorPot] = useLocalStorageState('pokermath.igor.pot', 24)
+  const [igorBet, setIgorBet] = useLocalStorageState('pokermath.igor.bet', 19)
+  const [knownCount, setKnownCount] = useLocalStorageState('pokermath.igor.known-count', 88)
+  const [bluffPot, setBluffPot] = useLocalStorageState('pokermath.igor.bluff-pot', 100)
+  const [bluffBet, setBluffBet] = useLocalStorageState('pokermath.igor.bluff-bet', 50)
+  const [bluffEquity, setBluffEquity] = useLocalStorageState('pokermath.igor.bluff-equity', 25)
+  const [raisePot, setRaisePot] = useLocalStorageState('pokermath.igor.raise-pot', 8)
+  const [raiseBet, setRaiseBet] = useLocalStorageState('pokermath.igor.raise-bet', 5)
+  const [raiseTotal, setRaiseTotal] = useLocalStorageState('pokermath.igor.raise-total', 23)
+  const [lineStartPot, setLineStartPot] = useLocalStorageState('pokermath.igor.line-start-pot', 40)
+  const [lineFlopBet, setLineFlopBet] = useLocalStorageState('pokermath.igor.line-flop-bet', 33)
+  const [lineTurnBet, setLineTurnBet] = useLocalStorageState('pokermath.igor.line-turn-bet', 75)
+  const [lineRiverBet, setLineRiverBet] = useLocalStorageState('pokermath.igor.line-river-bet', 125)
 
   const inventory = calculateIgorInventory(
     igorPot,
@@ -51,6 +63,10 @@ export function IgorMode({ displayMode }: IgorModeProps) {
   )
   const raiseMetrics = calculateRaiseMetrics(raisePot, raiseBet, raiseTotal)
   const bluffWithEquity = calculateBluffWithEquity(bluffPot, bluffBet, bluffEquity)
+  const linePlan = buildMultiStreetLine(lineStartPot, [lineFlopBet, lineTurnBet, lineRiverBet])
+  const activeLineSteps = linePlan.steps.filter((step) => step.active)
+  const lastActiveLineStep = activeLineSteps[activeLineSteps.length - 1] ?? null
+  const lineGrowthFactor = linePlan.finalPotIfCalled / linePlan.safeStartPot
 
   function switchPotInputMode(nextMode: PotInputMode) {
     if (nextMode === potInputMode) {
@@ -93,7 +109,11 @@ export function IgorMode({ displayMode }: IgorModeProps) {
       onClick: () => scrollToSection('igor-tools'),
     },
     {
-      label: 'Банк 100',
+      label: 'План линии',
+      onClick: () => scrollToSection('igor-line-builder'),
+    },
+    {
+      label: 'Справочник сайзингов',
       onClick: () => scrollToSection('igor-ladder'),
     },
   ]
@@ -103,54 +123,91 @@ export function IgorMode({ displayMode }: IgorModeProps) {
       <header className="hero-panel surface igor-hero">
         <div className="hero-copy">
           <p className="eyebrow">Режим Игоря</p>
-          <h1>Value ↔ bluff, клиентский пот и споты против коллбота.</h1>
+          <h1>Сначала вводишь спот, потом сразу видишь математику ставки.</h1>
           <p className="hero-text">
-            Сверху текущий спот, ниже три рабочих блока: <span>конвертер диапазона</span>,
-            рейз против <span>коллбота</span> и <span>semibluff с equity</span>. Таблица
-            `банк 100` остается снизу как справочник, а не мешается в первом экране.
+            Этот режим нужен для трёх частых задач: быстро перевести{' '}
+            <span>value ↔ bluff</span>, не путаться с <span>банком из клиента</span> и
+            проверить, как выглядит спот против <span>коллбота</span>. Если ты здесь
+            впервые, просто начни с главного блока ниже: выбери, как записан банк, введи
+            банк и ставку, а потом скажи калькулятору, сколько у тебя value или bluff.
           </p>
           <HeroActionChips ariaLabel="Быстрые действия режима Игоря" items={heroActions} />
         </div>
 
         <div className="hero-focus igor-focus">
-          <p className="focus-label">
-            {potInputMode === 'client' ? 'Спот в формате клиента' : 'Текущий спот'}
+          <p className="focus-label">С чего начать</p>
+          <p className="igor-focus-title">
+            Фиксируешь формат банка, вводишь ставку и выбираешь известную сторону диапазона.
           </p>
-          <p className="focus-size">
-            {formatDecimal(
-              potInputMode === 'client' ? inventory.safePotInput : inventory.safePot,
-            )}{' '}
-            / {formatDecimal(inventory.safeBet)}
-          </p>
-          <p className="focus-subtitle">
-            {potInputMode === 'client' ? (
-              <>
-                Клиент показывает банк <strong>{formatDecimal(inventory.safePotInput)}</strong>.
-                Для математики это <strong>{formatDecimal(inventory.safePot)}</strong> до ставки
-                и ставка <strong>{formatDecimal(inventory.safeBet)}</strong>.
-              </>
-            ) : (
-              <>
-                Банк <strong>{formatDecimal(inventory.safePot)}</strong>, ставка{' '}
-                <strong>{formatDecimal(inventory.safeBet)}</strong>, колл по шансам{' '}
-                <strong>{formatShare(inventory.oddsPercent, displayMode)}</strong>.
-              </>
-            )}
-          </p>
+          <div className="igor-focus-steps">
+            <div className="igor-focus-step">
+              <strong>1. Как записан банк</strong>
+              <p>Либо чистый пот до ставки, либо цифра из клиента, если рум уже показал банк после ставки.</p>
+            </div>
+            <div className="igor-focus-step">
+              <strong>2. Что у тебя уже известно</strong>
+              <p>Дальше говоришь калькулятору, знаешь ли ты количество value или количество bluff.</p>
+            </div>
+            <div className="igor-focus-step">
+              <strong>3. Что получаешь на выходе</strong>
+              <p>На выходе сразу видишь сайзинг, pot odds на колл и вторую сторону диапазона.</p>
+            </div>
+          </div>
+          <div className="focus-equation">
+            <span>{potInputMode === 'client' ? 'Пример на цифрах из клиента' : 'Пример на текущих числах'}</span>
+            <p className="igor-focus-example">
+              {formatDecimal(
+                potInputMode === 'client' ? inventory.safePotInput : inventory.safePot,
+              )}{' '}
+              / {formatDecimal(inventory.safeBet)} ={' '}
+              {formatBetLabel(inventory.betPercentOfPot, displayMode)}
+            </p>
+            <p>
+              {potInputMode === 'client' ? (
+                <>
+                  Рум показывает банк <strong>{formatDecimal(inventory.safePotInput)}</strong>.
+                  Калькулятор автоматически переводит это в чистый пот{' '}
+                  <strong>{formatDecimal(inventory.safePot)}</strong> до ставки и дальше считает
+                  баланс спота уже по корректной базе.
+                </>
+              ) : (
+                <>
+                  Это не отдельный режим, а просто живой пример того, что посчитает главный
+                  блок ниже: колл по шансам <strong>{formatShare(inventory.oddsPercent, displayMode)}</strong>,
+                  а на каждое <strong>1 value</strong> здесь можно держать примерно{' '}
+                  <strong>{formatDecimal(inventory.bluffPerValue)} bluff</strong>.
+                </>
+              )}
+            </p>
+          </div>
           <div className="focus-metrics">
+            <div>
+              <span>Колл по шансам</span>
+              <strong>{formatShare(inventory.oddsPercent, displayMode)}</strong>
+            </div>
             <div>
               <span>Блефов на 1 value</span>
               <strong>{formatDecimal(inventory.bluffPerValue)}</strong>
-            </div>
-            <div>
-              <span>Блефов в ставке</span>
-              <strong>{formatShare(inventory.bluffShareTotal, displayMode)}</strong>
             </div>
             <div>
               <span>Сайзинг</span>
               <strong>{formatBetLabel(inventory.betPercentOfPot, displayMode)}</strong>
             </div>
           </div>
+          <p className="focus-subtitle">
+            {potInputMode === 'client' ? (
+              <>
+                Если хочешь сразу работать с этими числами, жми <strong>«Пот как в клиенте»</strong>,
+                а ниже уже можно докрутить спот до нужного value ↔ bluff баланса.
+              </>
+            ) : (
+              <>
+                Главный рабочий экран идёт сразу после этого блока: там те же числа можно
+                перевести в <strong>value</strong>, <strong>bluff</strong> и баланс ставки без
+                лишней теории.
+              </>
+            )}
+          </p>
         </div>
       </header>
 
@@ -496,32 +553,273 @@ export function IgorMode({ displayMode }: IgorModeProps) {
         </div>
       </section>
 
-      <section className="surface cheat-table igor-table jump-target" id="igor-ladder">
-        <div className="section-head compact">
-          <div>
-            <p className="kicker">Справочник</p>
-            <h2>Банк 100: готовая лестница сайзингов</h2>
+      <section className="surface igor-line-builder jump-target" id="igor-line-builder">
+        <div className="igor-line-builder-top">
+          <div className="igor-line-builder-copy">
+            <p className="kicker">План линии</p>
+            <h2>Собери c-bet / barrel / jam и увидь математику всей линии заранее</h2>
+            <p className="hero-text">
+              Это уже не одна ставка в вакууме, а связная линия по улицам. Видно, как после
+              каждого колла растёт банк, во что превращается следующая ставка в абсолютных
+              фишках и сколько фолдов просит каждая улица, если оппонент продолжает.
+            </p>
           </div>
-          <p className="table-note">
-            Здесь живет reference-таблица: сколько фолдов нужно, сколько bluff на 1 value и
-            сколько защиты требуется при стандартных сайзингах. Удобно смотреть как{' '}
-            <strong>FE и MDF</strong> складываются в 100%, а <strong>1 колл = фолдов</strong>{' '}
-            повторяет размер ставки в банках.
-          </p>
+
+          <aside className="igor-line-builder-note">
+            <p className="card-label">Что видно сразу</p>
+            <h3>Не отдельный сайзинг, а целое давление по линии</h3>
+            <div className="igor-line-builder-note-list">
+              <p>
+                <strong>Банк раздувается каскадом.</strong> Поэтому одинаковые проценты на
+                тёрне и ривере ощущаются совсем по-разному.
+              </p>
+              <p>
+                <strong>Каждая улица читает свою FE.</strong> Можно заранее понять, где линия
+                остаётся связной, а где уже начинает просить слишком много фолдов.
+              </p>
+              <p>
+                <strong>Инвестиция видна целиком.</strong> Не только последняя ставка, а вся
+                сумма денег, которую ты реально вкладываешь в давление.
+              </p>
+            </div>
+          </aside>
+        </div>
+
+        <div className="igor-line-builder-strip">
+          <article className="igor-line-builder-stat">
+            <span>Активно в линии</span>
+            <strong>
+              {activeLineSteps.length} из {linePlan.steps.length}
+            </strong>
+            <p>
+              Сейчас в работе {activeLineSteps.length}{' '}
+              {pluralizeRu(activeLineSteps.length, ['улица', 'улицы', 'улиц'])} давления.
+            </p>
+          </article>
+          <article className="igor-line-builder-stat">
+            <span>Банк к последней ставке</span>
+            <strong>
+              {formatDecimal(lastActiveLineStep?.potBefore ?? linePlan.safeStartPot)}
+            </strong>
+            <p>С таким банком линия подходит к последнему активному решению.</p>
+          </article>
+          <article className="igor-line-builder-stat">
+            <span>Рост банка при коллах</span>
+            <strong>x{formatDecimal(lineGrowthFactor)}</strong>
+            <p>Во столько раз линия раздувает пот, если каждую улицу продолжают коллом.</p>
+          </article>
+        </div>
+
+        <div className="igor-line-builder-controls">
+          <div className="igor-line-builder-controls-head">
+            <p className="card-label">Конструктор линии</p>
+            <p className="table-note">
+              Читай слева направо, как последовательность узлов. Каждая следующая улица уже
+              наследует раздутый банк после колла предыдущей ставки. Если улица проходит через
+              чек, просто поставь <strong>0</strong>.
+            </p>
+          </div>
+
+          <div className="line-builder-flow">
+            <article className="line-builder-node line-builder-node-start">
+              <div className="line-builder-node-head">
+                <span className="line-builder-node-step">Старт</span>
+                <strong>Пот до флопа</strong>
+              </div>
+              <EditableNumberField
+                className="number-field line-builder-field"
+                inputMin={0}
+                label="Стартовый банк"
+                onValueChange={setLineStartPot}
+                sanitizeMin={0.01}
+                value={lineStartPot}
+              />
+              <div className="line-builder-node-meta line-builder-node-meta-single">
+                <div>
+                  <span>База линии</span>
+                  <strong>{formatDecimal(linePlan.safeStartPot)}</strong>
+                </div>
+              </div>
+            </article>
+
+            {linePlan.steps.map((step, index) => (
+              <article
+                className={
+                  step.active
+                    ? 'line-builder-node line-builder-node-street'
+                    : 'line-builder-node line-builder-node-street is-inactive'
+                }
+                key={step.street}
+              >
+                <div className="line-builder-node-head">
+                  <span className="line-builder-node-step">{step.street}</span>
+                  <strong>
+                    {step.active
+                      ? displayMode === 'percent'
+                        ? `${formatInteger(step.betPercent)}% банка`
+                        : formatBetLabel(step.betMultiple, displayMode)
+                      : 'Чек / 0%'}
+                  </strong>
+                </div>
+                <EditableNumberField
+                  className="number-field line-builder-field"
+                  inputMin={0}
+                  label={`${step.street}, % банка`}
+                  onValueChange={
+                    index === 0
+                      ? setLineFlopBet
+                      : index === 1
+                        ? setLineTurnBet
+                        : setLineRiverBet
+                  }
+                  sanitizeMin={0}
+                  value={step.betPercent}
+                />
+                <div className="line-builder-node-meta">
+                  <div>
+                    <span>Банк до</span>
+                    <strong>{formatDecimal(step.potBefore)}</strong>
+                  </div>
+                  <div>
+                    <span>Ставка</span>
+                    <strong>{step.active ? formatDecimal(step.betSize) : 'Чек'}</strong>
+                  </div>
+                  <div>
+                    <span>Фолдов нужно</span>
+                    <strong>
+                      {step.metrics === null
+                        ? '—'
+                        : formatShare(step.metrics.breakEvenFe, displayMode)}
+                    </strong>
+                  </div>
+                </div>
+                <p className="line-builder-node-foot">
+                  После колла <strong>{formatDecimal(step.potAfterCall)}</strong>
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className="summary-grid compact-summary">
+          <article className="result-card primary">
+            <p className="card-label">Финальный банк после коллов</p>
+            <h3>{formatDecimal(linePlan.finalPotIfCalled)}</h3>
+            <p>Во сколько раз линия раздувает пот, если каждую улицу просто коллят.</p>
+          </article>
+          <article className="result-card">
+            <p className="card-label">Всего инвестируем</p>
+            <h3>{formatDecimal(linePlan.totalInvestment)}</h3>
+            <p>Сумма всех ставок по линии без учёта префлопа и рейк-эффектов.</p>
+          </article>
         </div>
 
         <div className="table-wrap">
           <table>
-            <caption>Лестница сайзингов для банка 100.</caption>
+            <caption>Пошаговая математика линии по улицам.</caption>
             <thead>
               <tr>
+                <th scope="col">Улица</th>
+                <th scope="col">Банк до ставки</th>
                 <th scope="col">Ставка</th>
-                <th scope="col">Блефов, %</th>
+                <th scope="col">Фолдов нужно</th>
+                <th scope="col">Bluff share</th>
+                <th scope="col">Банк после колла</th>
+                <th scope="col">Инвестировано суммарно</th>
+              </tr>
+            </thead>
+            <tbody>
+              {linePlan.steps.map((step) => (
+                <tr key={step.street}>
+                  <td>{step.street}</td>
+                  <td>{formatDecimal(step.potBefore)}</td>
+                  <td>
+                    {step.active
+                      ? `${formatDecimal(step.betSize)} (${formatInteger(step.betPercent)}%)`
+                      : 'Чек'}
+                  </td>
+                  <td>
+                    {step.metrics === null
+                      ? '—'
+                      : formatShare(step.metrics.breakEvenFe, displayMode)}
+                  </td>
+                  <td>
+                    {step.metrics === null
+                      ? '—'
+                      : formatShare(step.metrics.bluffShare, displayMode)}
+                  </td>
+                  <td>{formatDecimal(step.potAfterCall)}</td>
+                  <td>{formatDecimal(step.cumulativeInvestment)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="igor-summary">
+          Логика чтения простая: каждая следующая улица уже работает от раздутого банка. Поэтому
+          даже одинаковый по проценту сайзинг на тёрне и ривере в абсолютных фишках ощущается
+          совсем по-разному.
+        </p>
+      </section>
+
+      <section className="surface cheat-table igor-table jump-target" id="igor-ladder">
+        <div className="section-head compact">
+          <div>
+            <p className="kicker">Справочник</p>
+            <h2>Стандартные сайзинги на одной шкале</h2>
+          </div>
+          <p className="table-note">
+            Здесь нет отдельного спота с банком <strong>100</strong>. Мы просто мысленно
+            принимаем пот за <strong>100 фишек</strong>, чтобы сайзинг сразу переводился в
+            числа: <strong>33% = 33</strong>, <strong>75% = 75</strong>,{' '}
+            <strong>125% = 125</strong>. Сами <strong>FE</strong>, <strong>MDF</strong> и
+            баланс от абсолютного банка не меняются.
+          </p>
+        </div>
+
+        <div className="igor-ladder-grid">
+          <article className="sheet-card dark">
+            <span>Зачем здесь 100</span>
+            <strong>Это просто линейка</strong>
+            <p>
+              Нормализованный банк нужен только для быстрого перевода процентов в фишки без
+              калькулятора.
+            </p>
+          </article>
+          <article className="sheet-card">
+            <span>Что смотреть первым</span>
+            <strong>FE + MDF = 100%</strong>
+            <p>
+              Если ставка просит 43% фолдов, то защищать против неё нужно примерно 57%
+              диапазона.
+            </p>
+          </article>
+          <article className="sheet-card">
+            <span>Как читать баланс</span>
+            <strong>Блефы и value рядом</strong>
+            <p>
+              Каждая строка сразу показывает, сколько блефов допустимо в ставке и сколько
+              value приходится на один bluff.
+            </p>
+          </article>
+        </div>
+
+        <div className="table-wrap">
+          <table>
+            <caption>
+              Нормализованная шкала: представь, что текущий банк равен 100, и проценты сразу
+              превратятся в фишки.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Сайзинг</th>
+                <th scope="col">Если банк = 100</th>
+                <th scope="col">Блефов в ставке</th>
                 <th scope="col">Фолдов нужно</th>
                 <th scope="col">MDF</th>
-                <th scope="col">Bluff / Value</th>
+                <th scope="col">Блефов на 1 value</th>
                 <th scope="col">Value на 1 bluff</th>
-                <th scope="col">1 колл = фолдов</th>
               </tr>
             </thead>
             <tbody>
@@ -532,9 +830,10 @@ export function IgorMode({ displayMode }: IgorModeProps) {
                   <tr key={bet}>
                     <td>
                       {displayMode === 'percent'
-                        ? `${formatInteger(bet)}%`
+                        ? `${formatInteger(bet)}% банка`
                         : formatBetLabel(bet / 100, displayMode)}
                     </td>
+                    <td>{formatInteger(bet)}</td>
                     <td>
                       {displayMode === 'percent'
                         ? formatSheetPercent(metrics.bluffShare)
@@ -556,7 +855,6 @@ export function IgorMode({ displayMode }: IgorModeProps) {
                         metrics.valueToBluff.numerator / metrics.valueToBluff.denominator,
                       )}
                     </td>
-                    <td>{formatDecimal(bet / 100)}</td>
                   </tr>
                 )
               })}

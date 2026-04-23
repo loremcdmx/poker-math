@@ -10,10 +10,10 @@ describe('CombinatoricsMode', () => {
     render(<CombinatoricsMode displayMode="percent" />)
 
     await user.click(screen.getByRole('button', { name: 'Очистить' }))
-    expect(screen.getByText(/0 классов/)).toBeInTheDocument()
+    expect(screen.getAllByText(/0 классов/).length).toBeGreaterThan(0)
 
     await user.click(screen.getByRole('button', { name: 'TT+' }))
-    expect(screen.getByText(/5 классов/)).toBeInTheDocument()
+    expect(screen.getAllByText(/5 классов/).length).toBeGreaterThan(0)
 
     await user.click(screen.getByRole('button', { name: 'A♥' }))
     await user.click(screen.getByRole('button', { name: 'K♦' }))
@@ -35,5 +35,13 @@ describe('CombinatoricsMode', () => {
     await user.click(screen.getByRole('button', { name: 'A♥ выбрано' }))
 
     expect(screen.getByRole('button', { name: 'A♥' })).toBeInTheDocument()
+  })
+
+  it('renders the outs widget in fraction mode', () => {
+    render(<CombinatoricsMode displayMode="fraction" />)
+
+    expect(screen.getByRole('heading', { name: 'Правило 4 и 2 в деле' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Outs count' })).toHaveValue('9')
+    expect(screen.getByText('FD + стрит-дро')).toBeInTheDocument()
   })
 })

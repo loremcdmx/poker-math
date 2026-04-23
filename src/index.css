@@ -13,6 +13,41 @@
   --accent-ink: #8e5b24;
   --font-ui: 'Manrope', sans-serif;
   --font-display: 'Prata', serif;
+  --surface-fill: rgba(255, 248, 232, 0.92);
+  --surface-fill-soft: rgba(255, 252, 246, 0.88);
+  --surface-fill-warm: rgba(255, 244, 227, 0.92);
+  --shadow-soft: 0 4px 12px rgba(9, 37, 31, 0.05);
+  --shadow-card: 0 6px 14px rgba(9, 37, 31, 0.06);
+
+  /* Layout contract
+     - kicker/eyebrow/support labels stay on one compact step
+     - hero H1 is the largest display step, section H2 is the next step down
+     - feature numbers/titles sit between section heading and body text
+     - reading measures stay constrained so long Russian copy does not drift */
+  --type-kicker: clamp(0.78rem, 0.12vw + 0.76rem, 0.84rem);
+  --type-body: clamp(0.98rem, 0.16vw + 0.95rem, 1.05rem);
+  --type-body-support: clamp(0.92rem, 0.14vw + 0.89rem, 0.98rem);
+  --type-title-feature: clamp(1.22rem, 0.98rem + 0.92vw, 1.58rem);
+  --type-title-section: clamp(1.58rem, 1.08rem + 1.7vw, 2.34rem);
+  --type-title-hero: clamp(2.35rem, 1.42rem + 2.85vw, 3.95rem);
+  --type-metric: clamp(1.9rem, 1.15rem + 2.35vw, 3rem);
+  --type-stat: clamp(1rem, 0.94rem + 0.36vw, 1.16rem);
+  --leading-display: 0.96;
+  --leading-heading: 1.04;
+  --leading-feature: 1.16;
+  --leading-body: 1.6;
+  --leading-support: 1.55;
+  --tracking-kicker: 0.16em;
+  --measure-hero: 11.5ch;
+  --measure-title: 18ch;
+  --measure-body: 58ch;
+  --measure-support: 64ch;
+  --stack-2xs: 6px;
+  --stack-xs: 10px;
+  --stack-sm: 14px;
+  --stack-md: 18px;
+  --stack-lg: 24px;
+  --stack-xl: 32px;
 
   font-family: var(--font-ui);
   line-height: 1.5;
@@ -39,19 +74,16 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background:
-    radial-gradient(circle at 20% 0%, rgba(255, 248, 232, 0.82), transparent 22%),
-    radial-gradient(circle at 80% 10%, rgba(236, 181, 90, 0.18), transparent 18%),
-    linear-gradient(180deg, #e8efe5 0%, #dae6d6 28%, #c7d7c4 100%);
+    radial-gradient(circle at 18% 0%, rgba(255, 248, 232, 0.68), transparent 24%),
+    linear-gradient(180deg, #e8efe5 0%, #d7e4d5 32%, #c7d7c4 100%);
   position: relative;
 }
 
 body::before {
   content: '';
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background:
-    radial-gradient(circle at 50% 18%, rgba(16, 61, 51, 0.16), transparent 24%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 38%);
+  background: radial-gradient(circle at 50% 18%, rgba(16, 61, 51, 0.08), transparent 24%);
   pointer-events: none;
 }
 

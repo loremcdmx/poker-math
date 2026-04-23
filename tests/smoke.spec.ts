@@ -43,8 +43,8 @@ test('igor mode mobile layout stays narrow and hero actions are useful', async (
   await page.getByRole('tab', { name: 'Режим Игоря' }).click()
   await page.getByRole('button', { name: 'Пот как в клиенте' }).click()
 
-  await expect(page.getByText('Спот в формате клиента')).toBeVisible()
-  await expect(page.getByText('Банк в клиенте')).toBeVisible()
+  await expect(page.getByText('Пример на цифрах из клиента')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Банк в клиенте' })).toBeVisible()
   await expect(page.locator('#igor-panel .focus-metrics strong').nth(2)).toHaveText('4/5 банка')
 
   const layout = await page.evaluate(() => ({

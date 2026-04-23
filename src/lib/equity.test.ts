@@ -35,6 +35,7 @@ describe('equity', () => {
     expect(result.heroEquity).toBe(1)
     expect(result.villainEquity).toBe(0)
     expect(result.validMatchups).toBe(1)
+    expect(result.calculationMode).toBe('exact')
   })
 
   it('returns zero when hands fully overlap', () => {
@@ -91,12 +92,57 @@ describe('equity', () => {
         mode: 'range',
         rangeCells: ['AA', 'AKs', 'AKo'],
       },
-      ['2c', '3d', '4h', '', ''],
+      ['', '', '', '', ''],
       1200,
     )
 
     expect(result.validMatchups).toBeGreaterThan(0)
-    expect(result.sampledTrials).toBe(1200)
+    expect(result.calculationMode).toBe('monte_carlo')
+    expect(result.plannedTrials).toBeGreaterThanOrEqual(1200)
+    expect(result.sampledTrials).toBeGreaterThanOrEqual(result.plannedTrials)
     expect(result.heroEquity + result.villainEquity).toBeCloseTo(1, 6)
+  })
+
+  it('switches to exact enumeration on the turn when the state space is small', () => {
+    const result = calculateEquity(
+      {
+        handCards: ['Ah', 'Ad'],
+        mode: 'hand',
+        rangeCells: [],
+      },
+      {
+        handCards: ['Kh', 'Kd'],
+        mode: 'hand',
+        rangeCells: [],
+      },
+      ['2c', '3d', '4h', '5s', ''],
+      4000,
+    )
+
+    expect(result.calculationMode).toBe('exact')
+    expect(result.sampledTrials).toBe(44)
+    expect(result.confidenceInterval.halfWidth).toBe(0)
+  })
+
+  it('respects range weights in combo and matchup counts', () => {
+    const result = calculateEquity(
+      {
+        handCards: ['', ''],
+        mode: 'range',
+        rangeCells: ['AA'],
+        rangeWeights: { AA: 0.25 },
+      },
+      {
+        handCards: ['', ''],
+        mode: 'range',
+        rangeCells: ['KK'],
+      },
+      ['2c', '3d', '4h', '5s', '7c'],
+      1000,
+    )
+
+    expect(result.heroWeightedComboCount).toBeCloseTo(1.5, 6)
+    expect(result.weightedMatchups).toBeCloseTo(9, 6)
+    expect(result.heroEquity).toBe(1)
   })
 })

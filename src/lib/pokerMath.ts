@@ -1,14 +1,28 @@
 export type DisplayMode = 'percent' | 'fraction'
 export type PotInputMode = 'clean' | 'client'
 export type IgorInventoryMode = 'value' | 'bluff'
+export type LineStreet = 'Флоп' | 'Тёрн' | 'Ривер'
 
 export type Fraction = {
   numerator: number
   denominator: number
 }
 
+export type MultiStreetLineStep = {
+  active: boolean
+  betMultiple: number
+  betPercent: number
+  betSize: number
+  cumulativeInvestment: number
+  metrics: ReturnType<typeof calculateMetrics> | null
+  potAfterCall: number
+  potBefore: number
+  street: LineStreet
+}
+
 export const quickPresetSizes = [0.25, 1 / 3, 0.5, 2 / 3, 0.75, 1, 1.25, 1.5, 2]
 export const igorLadderBets = [10, 20, 25, 33, 40, 50, 66, 70, 75, 100, 125, 150, 175, 200, 250]
+export const lineStreetLabels = ['Флоп', 'Тёрн', 'Ривер'] as const
 
 function greatestCommonDivisor(a: number, b: number) {
   let x = Math.abs(a)
@@ -170,5 +184,43 @@ export function calculateBluffWithEquity(pot: number, bet: number, equityPercent
     feWithEquity,
     savedFe,
     noFoldEquity,
+  }
+}
+
+export function buildMultiStreetLine(startPot: number, betPercents: number[]) {
+  const safeStartPot = Math.max(0.01, startPot)
+  let runningPot = safeStartPot
+  let cumulativeInvestment = 0
+
+  const steps = lineStreetLabels.map((street, index) => {
+    const betPercent = clamp(betPercents[index] ?? 0, 0, 500)
+    const active = betPercent > 0
+    const betMultiple = active ? betPercent / 100 : 0
+    const potBefore = runningPot
+    const betSize = active ? potBefore * betMultiple : 0
+
+    if (active) {
+      cumulativeInvestment += betSize
+      runningPot = potBefore + betSize * 2
+    }
+
+    return {
+      active,
+      betMultiple,
+      betPercent,
+      betSize,
+      cumulativeInvestment,
+      metrics: active ? calculateMetrics(betMultiple) : null,
+      potAfterCall: runningPot,
+      potBefore,
+      street,
+    } satisfies MultiStreetLineStep
+  })
+
+  return {
+    finalPotIfCalled: runningPot,
+    safeStartPot,
+    steps,
+    totalInvestment: cumulativeInvestment,
   }
 }

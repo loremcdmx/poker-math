@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { sanitizeNumber } from '../lib/pokerMath'
-import { parseInputNumber } from './editableNumberFieldUtils'
+import { normalizeInputNumberDraft, parseInputNumber } from './editableNumberFieldUtils'
 
 type EditableNumberFieldProps = {
   ariaLabel?: string
@@ -78,7 +78,7 @@ export function EditableNumberField({
   }, [draftValue, isEditing, onValueChange, sanitizeMax, sanitizeMin, value])
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const nextRawValue = event.target.value
+    const nextRawValue = normalizeInputNumberDraft(event.target.value)
     setDraftValue(nextRawValue)
 
     const parsedValue = parseInputNumber(nextRawValue)

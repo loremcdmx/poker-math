@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:smoke": "npm run build && start-server-and-test \"npm run preview -- --host 127.0.0.1 --port 4175\" http://127.0.0.1:4175 \"playwright test\"",
+    "test:perf": "npm run build && start-server-and-test \"npm run preview -- --host 127.0.0.1 --port 4175\" http://127.0.0.1:4175 \"playwright test tests/performance.spec.ts\"",
+    "test:smoke": "npm run build && start-server-and-test \"npm run preview -- --host 127.0.0.1 --port 4175\" http://127.0.0.1:4175 \"sh -c 'playwright test tests/smoke.spec.ts && playwright test tests/performance.spec.ts'\"",
     "preview": "vite preview"
   },
   "dependencies": {
