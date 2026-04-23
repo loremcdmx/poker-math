@@ -46,15 +46,13 @@ describe('EquityMode', () => {
 
     render(<EquityMode displayMode="percent" embedded />)
 
-    let flopOne = screen.getByRole('combobox', { name: 'Флоп 1' })
-    expect(within(flopOne).getByRole('option', { name: 'A♥' })).toBeDisabled()
-    expect(within(flopOne).getByRole('option', { name: 'A♦' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'A♥' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'A♦' })).toBeDisabled()
 
     await user.click(screen.getAllByRole('button', { name: 'Рука' })[1])
 
-    flopOne = screen.getByRole('combobox', { name: 'Флоп 1' })
-    expect(within(flopOne).getByRole('option', { name: 'K♥' })).toBeDisabled()
-    expect(within(flopOne).getByRole('option', { name: 'K♦' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'K♥' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'K♦' })).toBeDisabled()
   })
 
   it('clears hidden exact-hand blockers when switching a side from range to hand', async () => {
@@ -62,7 +60,7 @@ describe('EquityMode', () => {
 
     render(<EquityMode displayMode="percent" embedded />)
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Флоп 1' }), 'Kh')
+    await user.click(screen.getByRole('button', { name: 'K♥' }))
     await user.click(screen.getAllByRole('button', { name: 'Рука' })[1])
 
     expect(screen.getByRole('combobox', { name: 'Villain Карта 1' })).toHaveValue('')
@@ -78,7 +76,7 @@ describe('EquityMode', () => {
       screen.getByText(/Текущий результат соответствует выбранным рукам/i),
     ).toBeInTheDocument()
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Флоп 1' }), '2c')
+    await user.click(screen.getByRole('button', { name: '2♣' }))
 
     expect(screen.getByText(/equity-цифры уже устарели/i)).toBeInTheDocument()
 
@@ -145,7 +143,7 @@ describe('EquityMode', () => {
       expect(worker.messages).toHaveLength(1)
 
       const staleRequest = worker.messages[0]
-      await user.selectOptions(screen.getByRole('combobox', { name: 'Флоп 1' }), '2c')
+      await user.click(screen.getByRole('button', { name: '2♣' }))
 
       expect(screen.getByText(/equity-цифры уже устарели/i)).toBeInTheDocument()
 

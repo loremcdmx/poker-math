@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { BoardPicker } from '../components/BoardPicker'
 import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import {
@@ -27,7 +28,6 @@ const suitGlyphMap = {
   s: '♠',
 } as const
 
-const boardLabels = ['Флоп 1', 'Флоп 2', 'Флоп 3', 'Тёрн', 'Ривер'] as const
 const exactHandLabels = ['Карта 1', 'Карта 2'] as const
 const rangeGrid = getRangeGrid()
 const cardOptions = getCardOptions()
@@ -222,6 +222,13 @@ export function EquityMode({
     () => sumComboWeights(villainPreviewCombos),
     [villainPreviewCombos],
   )
+  const boardSummary =
+    boardCards.filter((card): card is CardCode => card !== '').length === 0
+      ? 'борд пока пустой'
+      : boardCards
+          .filter((card): card is CardCode => card !== '')
+          .map(formatCard)
+          .join(' ')
   const boardStageLabel = getBoardStageLabel(result.board.length)
   const calculationModeLabel = result.calculationMode === 'exact' ? 'Точный' : 'Monte Carlo'
 
@@ -354,6 +361,47 @@ export function EquityMode({
     markStale()
   }
 
+  function isBoardPickerCardDisabled(candidateCard: CardCode) {
+    if (heroMode === 'hand' && heroHand.includes(candidateCard)) {
+      return true
+    }
+
+    if (villainMode === 'hand' && villainHand.includes(candidateCard)) {
+      return true
+    }
+
+    return false
+  }
+
+  function toggleBoardCard(card: CardCode) {
+    const selectedIndex = boardCards.indexOf(card)
+
+    if (selectedIndex !== -1) {
+      setBoardCard(selectedIndex, '')
+      return
+    }
+
+    if (isBoardPickerCardDisabled(card)) {
+      return
+    }
+
+    const firstEmptySlot = boardCards.indexOf('')
+
+    if (firstEmptySlot === -1) {
+      return
+    }
+
+    setBoardCard(firstEmptySlot, card)
+  }
+
+  function clearBoardSlot(slotIndex: number) {
+    if (boardCards[slotIndex] === '') {
+      return
+    }
+
+    setBoardCard(slotIndex, '')
+  }
+
   function clearBoard() {
     const emptyBoard: Array<CardCode | ''> = ['', '', '', '', '']
     setBoardCards(emptyBoard)
@@ -398,30 +446,6 @@ export function EquityMode({
     }
 
     if (otherMode === 'hand' && otherHand.includes(candidateCard)) {
-      return true
-    }
-
-    return false
-  }
-
-  function isBoardCardDisabled(slotIndex: number, candidateCard: CardCode) {
-    if (
-      boardCards.some((selectedCard, selectedIndex) => {
-        if (selectedIndex === slotIndex) {
-          return false
-        }
-
-        return selectedCard === candidateCard
-      })
-    ) {
-      return true
-    }
-
-    if (heroMode === 'hand' && heroHand.includes(candidateCard)) {
-      return true
-    }
-
-    if (villainMode === 'hand' && villainHand.includes(candidateCard)) {
       return true
     }
 
@@ -812,29 +836,15 @@ export function EquityMode({
           </div>
         </div>
 
-        <div className="board-control-grid">
-          {boardLabels.map((label, index) => (
-            <label className="board-field" key={label}>
-              <span>{label}</span>
-              <select
-                aria-label={label}
-                onChange={(event) => setBoardCard(index, event.target.value)}
-                value={boardCards[index]}
-              >
-                <option value="">—</option>
-                {cardOptions.map((card) => (
-                  <option
-                    disabled={isBoardCardDisabled(index, card)}
-                    key={`board-${card}`}
-                    value={card}
-                  >
-                    {formatCard(card)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
-        </div>
+        <BoardPicker
+          ariaLabel="Equity board picker"
+          boardCards={boardCards}
+          boardSummary={boardSummary}
+          isCardDisabled={isBoardPickerCardDisabled}
+          onClearBoard={clearBoard}
+          onClearSlot={clearBoardSlot}
+          onToggleCard={toggleBoardCard}
+        />
 
         <div className="equity-toolbar">
           <EditableNumberField
@@ -850,9 +860,6 @@ export function EquityMode({
           />
 
           <div className="combo-board-toolbar">
-            <button className="mode-chip" onClick={clearBoard} type="button">
-              Очистить борд
-            </button>
             <button
               className="mode-chip active"
               disabled={isPending}

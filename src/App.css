@@ -1501,6 +1501,17 @@ tbody tr:hover td {
   color: var(--felt-cream);
 }
 
+.mode-chip:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.mode-chip:disabled:hover,
+.mode-chip:disabled:focus-visible {
+  transform: none;
+  box-shadow: none;
+}
+
 .quick-chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -1655,7 +1666,8 @@ tbody tr:hover td {
 #combo-outs,
 #combo-grid,
 #combo-board,
-#combo-categories {
+#combo-categories,
+#equity-board {
   padding: clamp(22px, 3vw, 30px);
 }
 
@@ -1673,7 +1685,9 @@ tbody tr:hover td {
 }
 
 #advanced-board,
-#advanced-texture {
+#advanced-texture,
+#combo-board,
+#combo-categories {
   grid-column: 1 / -1;
 }
 
@@ -2069,16 +2083,22 @@ tbody tr:hover td {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.board-slots {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .board-slot {
   display: grid;
-  gap: 10px;
+  gap: 7px;
   align-content: space-between;
   justify-items: center;
-  min-height: 102px;
-  padding: 12px 8px;
+  min-height: 70px;
+  padding: 9px 6px;
   background: rgba(255, 252, 246, 0.9);
   border: 1px solid rgba(58, 38, 23, 0.12);
-  border-radius: 18px;
+  border-radius: 14px;
   color: var(--ink-soft);
   font: inherit;
   text-align: center;
@@ -2110,15 +2130,17 @@ tbody tr:hover td {
 }
 
 .board-slot-label {
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  line-height: 1.05;
   text-transform: uppercase;
   color: var(--accent-ink);
+  white-space: nowrap;
 }
 
 .board-slot-card {
   font-family: var(--font-display);
-  font-size: 1.85rem;
+  font-size: clamp(1.32rem, 1.1rem + 0.72vw, 1.74rem);
   font-weight: 500;
   line-height: 1;
 }
@@ -2137,12 +2159,20 @@ tbody tr:hover td {
 
 .board-picker-panel {
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 22px;
+  gap: 10px;
+  margin-top: 22px;
+  padding: clamp(12px, 1.8vw, 16px);
+  border-radius: 20px;
   border: 1px solid rgba(58, 38, 23, 0.1);
   background:
     linear-gradient(180deg, rgba(255, 252, 246, 0.96), rgba(252, 246, 236, 0.94));
+}
+
+.board-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .board-picker-kicker {
@@ -2151,45 +2181,47 @@ tbody tr:hover td {
 
 .board-picker-active {
   display: grid;
-  gap: 4px;
+  gap: 3px;
+  min-width: 0;
 }
 
 .board-picker-active strong {
   color: var(--ink-strong);
   font-family: var(--font-display);
-  font-size: 1.6rem;
+  font-size: clamp(1.16rem, 0.98rem + 0.72vw, 1.42rem);
   font-weight: 500;
   line-height: 1.02;
+  overflow-wrap: anywhere;
 }
 
 .combo-board-hint {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   color: var(--ink-soft);
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
 .board-picker-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .card-picker {
   display: grid;
-  gap: 6px;
-  margin-top: 16px;
-  padding: 14px;
+  gap: 5px;
+  padding: 10px;
   background: rgba(255, 250, 240, 0.6);
   border: 1px solid rgba(58, 38, 23, 0.1);
-  border-radius: 20px;
+  border-radius: 16px;
   overflow-x: auto;
 }
 
 .card-picker-row {
   display: grid;
-  grid-template-columns: 34px repeat(13, minmax(36px, 1fr));
-  gap: 6px;
+  grid-template-columns: 26px repeat(13, minmax(28px, 1fr));
+  gap: 5px;
   align-items: center;
 }
 
@@ -2211,14 +2243,14 @@ tbody tr:hover td {
 
 .card-picker-cell {
   border: 1px solid rgba(58, 38, 23, 0.14);
-  border-radius: 10px;
-  padding: 8px 6px;
-  min-height: 40px;
+  border-radius: 9px;
+  padding: 6px 4px;
+  min-height: 34px;
   background: rgba(255, 252, 246, 0.9);
   color: var(--ink-strong);
   font: inherit;
   font-weight: 700;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   cursor: pointer;
   transition:
     background 0.14s ease,
@@ -2886,6 +2918,21 @@ tbody tr:hover td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .board-slots {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .board-slot {
+    min-height: 62px;
+    padding: 8px 3px;
+  }
+
+  .board-slot-label {
+    font-size: 0.52rem;
+    letter-spacing: 0.06em;
+  }
+
   .combo-guide-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2936,6 +2983,16 @@ tbody tr:hover td {
     flex-direction: column;
   }
 
+  .board-picker-header {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .board-picker-actions {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+
   .combo-board-toolbar {
     align-items: start;
     flex-direction: column;
@@ -2950,18 +3007,18 @@ tbody tr:hover td {
   }
 
   .card-picker-row {
-    grid-template-columns: 24px repeat(13, minmax(0, 1fr));
-    gap: 4px;
+    grid-template-columns: 20px repeat(13, minmax(0, 1fr));
+    gap: 3px;
   }
 
   .card-picker-cell {
-    padding: 6px 2px;
-    min-height: 36px;
-    font-size: 0.84rem;
+    padding: 5px 1px;
+    min-height: 32px;
+    font-size: 0.78rem;
   }
 
   .card-picker-suit {
-    font-size: 1.05rem;
+    font-size: 0.98rem;
   }
 
   .equity-toolbar {
@@ -3029,6 +3086,10 @@ tbody tr:hover td {
   .board-slots,
   .combo-guide-grid {
     grid-template-columns: 1fr;
+  }
+
+  .board-slots {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .adv-dock {

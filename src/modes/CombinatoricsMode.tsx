@@ -1,10 +1,10 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { BoardPicker } from '../components/BoardPicker'
 import { EditableNumberField } from '../components/EditableNumberField'
 import { HeroActionChips } from '../components/HeroActionChips'
 import { formatInteger, formatShare } from '../lib/formatters'
 import {
   analyzeRange,
-  cardSuits,
   getBackdoorLabel,
   getDrawLabel,
   getMadeHandLabel,
@@ -12,7 +12,6 @@ import {
   getRangeGrid,
   rangeRanks,
   type CardCode,
-  type CardSuit,
 } from '../lib/combinatorics'
 import type { DisplayMode } from '../lib/pokerMath'
 
@@ -23,14 +22,6 @@ const suitGlyphMap = {
   s: '♠',
 } as const
 
-const suitLabelMap: Record<CardSuit, string> = {
-  c: 'Трефы',
-  d: 'Бубны',
-  h: 'Червы',
-  s: 'Пики',
-}
-
-const boardLabels = ['Флоп 1', 'Флоп 2', 'Флоп 3', 'Тёрн', 'Ривер'] as const
 const rangeGrid = getRangeGrid()
 
 const OUTS_PRESETS: Array<{ outs: number; label: string }> = [
@@ -146,8 +137,6 @@ export function CombinatoricsMode({ displayMode }: CombinatoricsModeProps) {
   )
   const boardSummary =
     analysis.board.length === 0 ? 'борд пока пустой' : analysis.board.map(formatCard).join(' ')
-  const boardCardSet = new Set(analysis.board)
-  const firstEmptyBoardSlot = boardCards.indexOf('')
   const [outs, setOuts] = useState(9)
   const [outsDrillIndex, setOutsDrillIndex] = useState(2)
   const [outsDrillGuess, setOutsDrillGuess] = useState(36)
@@ -732,87 +721,14 @@ export function CombinatoricsMode({ displayMode }: CombinatoricsModeProps) {
                 </p>
               </div>
 
-              <div className="board-slots" role="group" aria-label="Board slots">
-                {boardLabels.map((label, index) => {
-                  const card = boardCards[index]
-                  const filled = card !== ''
-                  const isNext = !filled && firstEmptyBoardSlot === index
-
-                  return (
-                    <button
-                      aria-label={
-                        filled ? `${label}: ${formatCard(card)} — убрать` : `${label} — пусто`
-                      }
-                      className={`board-slot${filled ? ' filled' : ''}${isNext ? ' next' : ''}`}
-                      key={label}
-                      onClick={() => clearBoardSlot(index)}
-                      type="button"
-                    >
-                      <span className="board-slot-label">{label}</span>
-                      {filled ? (
-                        <span className={`board-slot-card ${getCardTone(card)}`}>
-                          {formatCard(card)}
-                        </span>
-                      ) : (
-                        <span aria-hidden="true" className="board-slot-card empty">
-                          —
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="combo-board-toolbar">
-                <p aria-live="polite" className="combo-board-hint">
-                  {analysis.board.length === 0
-                    ? 'Кликай по картам ниже — первые 3 становятся флопом, 4-я тёрном, 5-я ривером.'
-                    : `Выбрано ${analysis.board.length} из 5: ${analysis.board.map(formatCard).join(' ')}`}
-                </p>
-                <button
-                  aria-label="Очистить борд"
-                  className="mode-chip"
-                  disabled={analysis.board.length === 0}
-                  onClick={clearBoard}
-                  type="button"
-                >
-                  Очистить борд
-                </button>
-              </div>
-
-              <div className="card-picker" role="group" aria-label="Card picker">
-                {cardSuits.map((suit) => (
-                  <div className="card-picker-row" key={suit}>
-                    <span
-                      className={`card-picker-suit ${suit === 'h' || suit === 'd' ? 'red' : 'dark'}`}
-                    >
-                      {suitGlyphMap[suit]}
-                      <span className="visually-hidden">{suitLabelMap[suit]}</span>
-                    </span>
-                    {rangeRanks.map((rank) => {
-                      const card = `${rank}${suit}` as CardCode
-                      const selected = boardCardSet.has(card)
-                      const boardFull = analysis.board.length >= 5 && !selected
-
-                      return (
-                        <button
-                          aria-label={`${rank}${suitGlyphMap[suit]}${selected ? ' выбрано' : ''}`}
-                          aria-pressed={selected}
-                          className={`card-picker-cell ${getCardTone(card)}${
-                            selected ? ' selected' : ''
-                          }${boardFull ? ' disabled' : ''}`}
-                          disabled={boardFull}
-                          key={card}
-                          onClick={() => toggleBoardCard(card)}
-                          type="button"
-                        >
-                          {rank}
-                        </button>
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
+              <BoardPicker
+                ariaLabel="Combinatorics board picker"
+                boardCards={boardCards}
+                boardSummary={boardSummary}
+                onClearBoard={clearBoard}
+                onClearSlot={clearBoardSlot}
+                onToggleCard={toggleBoardCard}
+              />
 
               <div className="summary-grid compact-summary">
                 <article className="result-card primary">
