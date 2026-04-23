@@ -1,5 +1,5 @@
 .app-shell {
-  width: min(1180px, calc(100% - 32px));
+  width: min(1180px, calc(100% - clamp(36px, 5vw, 72px)));
   margin: 0 auto;
   padding: 32px 0 56px;
 }
@@ -1650,7 +1650,12 @@ tbody tr:hover td {
 #advanced-guide,
 #advanced-grid,
 #advanced-board,
-#advanced-categories {
+#advanced-categories,
+#combo-guide,
+#combo-outs,
+#combo-grid,
+#combo-board,
+#combo-categories {
   padding: clamp(22px, 3vw, 30px);
 }
 
@@ -2748,7 +2753,7 @@ tbody tr:hover td {
 
 @media (max-width: 720px) {
   .app-shell {
-    width: min(100% - 20px, 1180px);
+    width: min(100% - 24px, 1180px);
     padding: 16px 0 32px;
   }
 
@@ -2877,9 +2882,12 @@ tbody tr:hover td {
   .igor-output-grid,
   .igor-raw-grid,
   .global-display-toggle,
-  .board-slots,
-  .combo-guide-grid {
+  .board-slots {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .combo-guide-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .quick-drill-controls,
@@ -3453,7 +3461,7 @@ tbody tr:hover td {
 
 @media (max-width: 560px) {
   .app-shell {
-    width: min(100% - 16px, 1180px);
+    width: min(100% - 20px, 1180px);
     padding: 14px 0 28px;
   }
 

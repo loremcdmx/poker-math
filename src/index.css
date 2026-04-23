@@ -72,6 +72,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: clip;
   color: var(--ink);
   background:
     radial-gradient(circle at 18% 0%, rgba(255, 248, 232, 0.68), transparent 24%),
