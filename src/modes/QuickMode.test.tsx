@@ -98,6 +98,10 @@ describe('QuickMode', () => {
 
     expect(screen.getByText('Попал')).toBeInTheDocument()
     expect(screen.getAllByText('42,9%').length).toBeGreaterThan(0)
+    const solution = screen.getByLabelText('Решение по алгоритму')
+    expect(solution).toBeInTheDocument()
+    expect(solution).toHaveTextContent(/риск\s+3\s+за награду\s+4/i)
+    expect(solution).toHaveTextContent(/FE = risk \/ \(risk \+ reward\)/i)
   })
 
   it('merges call odds and value-to-bluff into one explanation card', () => {

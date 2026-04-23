@@ -2310,6 +2310,25 @@ tbody tr:hover td {
   border-color: rgba(24, 92, 76, 0.16);
 }
 
+.quick-drill-solution {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(26, 82, 66, 0.14);
+}
+
+.quick-drill-solution ol {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding-left: 1.25rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.quick-drill-solution strong {
+  color: var(--ink);
+}
+
 .texture-tag-grid {
   display: grid;
   gap: 16px;

@@ -65,6 +65,9 @@ export function QuickMode({
   const showRatioAccuracy = ratioAccuracy.errorPercent >= RATIO_ERROR_THRESHOLD_PERCENT
   const drillDifference = Math.abs(drillMetrics.breakEvenFe * 100 - drillGuess)
   const drillSolved = drillDifference <= 1.5
+  const drillRisk = drillMetrics.betFraction.numerator
+  const drillReward = drillMetrics.betFraction.denominator
+  const drillTotalParts = drillRisk + drillReward
 
   function nextDrillRound() {
     const nextOptions = drillBetPool.filter((size) => size !== drillBetPercent)
@@ -350,6 +353,32 @@ export function QuickMode({
               <strong>{drillDifference.toFixed(1)} п.п.</strong>. Для этого сайзинга MDF будет{' '}
               <strong>{formatShare(drillMetrics.mdf, displayMode)}</strong>.
             </p>
+            <div className="quick-drill-solution" aria-label="Решение по алгоритму">
+              <p className="card-label">Решение по алгоритму</p>
+              <ol>
+                <li>
+                  Сайзинг {formatBetLabel(drillBetPercent / 100, displayMode)} читаем как риск{' '}
+                  <strong>{formatInteger(drillRisk)}</strong> за награду{' '}
+                  <strong>{formatInteger(drillReward)}</strong>.
+                </li>
+                <li>
+                  Складываем риск и награду:{' '}
+                  <strong>
+                    {formatInteger(drillRisk)} + {formatInteger(drillReward)} ={' '}
+                    {formatInteger(drillTotalParts)}
+                  </strong>
+                  .
+                </li>
+                <li>
+                  FE = risk / (risk + reward) ={' '}
+                  <strong>
+                    {formatInteger(drillRisk)} / {formatInteger(drillTotalParts)} ={' '}
+                    {formatShare(drillMetrics.breakEvenFe, 'percent')}
+                  </strong>
+                  .
+                </li>
+              </ol>
+            </div>
           </article>
         ) : null}
       </section>
