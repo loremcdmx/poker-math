@@ -1968,11 +1968,17 @@ tbody tr:hover td {
 }
 
 .range-cell.active {
-  border-color: rgba(172, 121, 41, 0.38);
+  border-color: var(--felt-deep);
+  background: var(--felt);
+  color: var(--felt-cream);
 }
 
 .range-cell.active::before {
   opacity: 1;
+}
+
+.range-cell.active .range-cell-weight {
+  color: var(--gold);
 }
 
 .range-cell > span,
@@ -3332,8 +3338,8 @@ tbody tr:hover td {
 
 .range-cell.active {
   box-shadow:
-    0 10px 18px rgba(9, 37, 31, 0.22),
-    inset 0 0 0 1px rgba(236, 181, 90, 0.22);
+    0 12px 22px rgba(9, 37, 31, 0.32),
+    inset 0 0 0 2px var(--gold);
 }
 
 .footnote,
